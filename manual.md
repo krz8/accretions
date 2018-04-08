@@ -7,8 +7,8 @@ Overview
 [Homepage][home] [Manual][manual]
 
 Accretions is a collection of data structures that don't already exist
-in standard Common Lisp.  Of course, we already have lists, and most
-CL implementations also have performant hash tables.  But there remain
+in Common Lisp.  Of course, we already have lists, and most CL
+implementations also have performant hash tables.  But there remain
 other data structures that are essential to certain applications.
 Accretions is my collection of them.
 
@@ -171,8 +171,8 @@ The two forms shown here are roughly equivalent.
 Iterators also take optional modifiers to their behavior as a trailing
 keyword:
 
-- :PEEK will return the same values as a simple invocation of the
-  iterating function, but it will not advance.
+:PEEK will return the same values as a simple invocation of the
+iterating function, but it will not advance.
 
     CL-USER> (let ((b (acr:make-bag)))
 		   (mapc (lambda (x) (acr:add x b))
@@ -185,9 +185,9 @@ keyword:
     42
     T
 
-- :RESET will move the iterator back to the beginning of the
-  collection, leaving the iterator in the same state as if it had been
-  newly created.
+:RESET will move the iterator back to the beginning of the
+collection, leaving the iterator in the same state as if it had been
+newly created.
 
     CL-USER> (let ((b (acr:make-bag)))
 		   (mapc (lambda (x) (acr:add x b))
