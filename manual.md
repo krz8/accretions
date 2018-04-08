@@ -118,10 +118,10 @@ underlying data type; in Accretions, the same function MAPFUN is
 commonly used for all collections.
 
     CL-USER> (let ((b (acr:make-bag)))
-      	       (mapc (lambda (x) (acr:add x b))
-               	     '("foobar" t 42))
-	       (acr:mapfun (lambda (x) (print x))
-      	               b))
+               (mapc (lambda (x) (acr:add x b))
+                     '("foobar" t 42))
+               (acr:mapfun (lambda (x) (print x))
+                       b))
     42
     T
     "foobar"
@@ -142,12 +142,12 @@ MAKE-ITERATOR into a commonly useful form, binding the returned
 iterator function to a given name for invocation.
 
     CL-USER> (let ((bag (acr:make-bag)))
-	       …
-	       (acr:with-iterator (fn b)
-	         (loop with item and ok
-		       do (setf (values item ok) (fn))
-		       while ok
-		       do (print item)))
+               …
+               (acr:with-iterator (fn b)
+                 (loop with item and ok
+                       do (setf (values item ok) (fn))
+                       while ok
+                       do (print item)))
     "foobar"
     T
     42
@@ -175,12 +175,12 @@ keyword:
 iterating function, but it will not advance.
 
     CL-USER> (let ((b (acr:make-bag)))
-		   (mapc (lambda (x) (acr:add x b))
-			 '("foobar" t 42))
-		   (acr:with-iterator (fn b)
-		     (print (fn :peek))
-		     (print (fn))
-		     (print (fn))))
+                   (mapc (lambda (x) (acr:add x b))
+                         '("foobar" t 42))
+                   (acr:with-iterator (fn b)
+                     (print (fn :peek))
+                     (print (fn))
+                     (print (fn))))
     42
     42
     T
@@ -190,13 +190,13 @@ collection, leaving the iterator in the same state as if it had been
 newly created.
 
     CL-USER> (let ((b (acr:make-bag)))
-		   (mapc (lambda (x) (acr:add x b))
-			 '("foobar" t 42))
-		   (acr:with-iterator (fn b)
-		     (print (fn))
-		     (print (fn))
-		     (fn :reset)
-		     (print (fn))))
+                   (mapc (lambda (x) (acr:add x b))
+                         '("foobar" t 42))
+                   (acr:with-iterator (fn b)
+                     (print (fn))
+                     (print (fn))
+                     (fn :reset)
+                     (print (fn))))
     42
     T
     42
