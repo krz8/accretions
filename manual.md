@@ -6,11 +6,11 @@ Overview
 
 [Homepage][home] [Manual][manual]
 
-Accretions is a collection of data structures that don't already exist
-in Common Lisp.  Of course, we already have lists, and most CL
-implementations also have performant hash tables.  But there remain
-other data structures that are essential to certain applications.
-Accretions is my collection of them.
+Accretions is a collection of efficient (or, at least, fast) data
+structures that don't already exist in Common Lisp.  Of course, we
+already have lists, and most CL implementations also have performant
+hash tables.  But there remain other data structures that are
+essential to certain applications, which Accretions supplies.
 
 [home]:    https://krz8.github.io/accretions        "Accretions Homepage"
 [manual]:  https://krz8.github.io/accretions/manual "Accretions Manual"
@@ -175,12 +175,12 @@ keyword:
 iterating function, but it will not advance.
 
     CL-USER> (let ((b (acr:make-bag)))
-                   (mapc (lambda (x) (acr:add x b))
-                         '("foobar" t 42))
-                   (acr:with-iterator (fn b)
-                     (print (fn :peek))
-                     (print (fn))
-                     (print (fn))))
+               (mapc (lambda (x) (acr:add x b))
+                     '("foobar" t 42))
+                 (acr:with-iterator (fn b)
+                   (print (fn :peek))
+                   (print (fn))
+                   (print (fn))))
     42
     42
     T
@@ -190,13 +190,13 @@ collection, leaving the iterator in the same state as if it had been
 newly created.
 
     CL-USER> (let ((b (acr:make-bag)))
-                   (mapc (lambda (x) (acr:add x b))
-                         '("foobar" t 42))
-                   (acr:with-iterator (fn b)
-                     (print (fn))
-                     (print (fn))
-                     (fn :reset)
-                     (print (fn))))
+               (mapc (lambda (x) (acr:add x b))
+                     '("foobar" t 42))
+               (acr:with-iterator (fn b)
+                 (print (fn))
+                 (print (fn))
+                 (fn :reset)
+                 (print (fn))))
     42
     T
     42
