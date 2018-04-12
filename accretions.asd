@@ -10,7 +10,7 @@
   :homepage "http://github.com/krz8/accretions/"
   :long-description "Accretions provides a growing set of alternative
   data structures, such as ternary search tries, used in various
-  applications that are lacking from the Common Lisp standard.  Some
+  applications that aren't present in the Common Lisp standard.  Some
   of these are, undoubtedly, provided by various CL implentations, but
   they are unmeasured in performance and cannot be relied upon to
   exist everywhere by portable software.  Accretions seeks to address
@@ -20,4 +20,6 @@
 	       (:file "misc" :depends-on ("pkg"))
 	       (:file "generics" :depends-on ("pkg"))
 	       (:file "counted" :depends-on ("misc"))
-	       (:file "bag" :depends-on ("counted"))))
+	       (:file "valued" :depends-on ("misc"))
+	       (:file "bag" :depends-on ("counted"))
+	       (:file "ternary" :depends-on ("counted" "valued"))))

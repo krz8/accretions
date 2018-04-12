@@ -6,11 +6,10 @@ Overview
 
 [Homepage][home] [Manual][manual]
 
-Accretions is a collection of efficient (or, at least, fast) data
-structures that don't already exist in Common Lisp.  Of course, we
-already have lists, and most CL implementations also have performant
-hash tables.  But there remain other data structures that are
-essential to certain applications, which Accretions supplies.
+Accretions aims to supply data structures that aren't already present
+in the Common Lisp standard.  Additionally, it intends to be maybe a
+little faster, maybe a little more efficient, and maybe a little more
+consistent than other implementations out there.
 
 [home]:    https://krz8.github.io/accretions        "Accretions Homepage"
 [manual]:  https://krz8.github.io/accretions/manual "Accretions Manual"
@@ -200,6 +199,22 @@ newly created.
     42
     T
     42
+
+
+### Testing Presence
+
+CONTAINSP searches a collection for a particular item (or, in a
+key/value store, a particular key) and returns true when at least one
+is found.
+
+    CL-USER> (let ((b (acr:make-bag)))
+               (mapc (lambda (x) (acr:add x b))
+                     '("foobar" t 42))
+               (print (acr:containsp "foo" b))
+               (print (acr:containsp "foobar" b)))
+    NIL
+    T
+
 
 
 Bags

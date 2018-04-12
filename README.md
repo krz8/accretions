@@ -6,9 +6,9 @@ Overview
 
 [Homepage][home] [Manual][manual]
 
-Accretions is a collection of data structures that don't already exist
-in standard Common Lisp.  Of course, we already have lists, and most
-CL implementation also have performant hash tables.  But there remain
+Accretions is a collection of data structures that aren't present in
+standard Common Lisp.  Of course, we already have lists, and most CL
+implementation also have performant hash tables.  But there remain
 other data structures that are essential to certain applications.
 Accretions is my collection of them.
 
@@ -29,13 +29,13 @@ Functionality
 
 - Bags (Multisets): A simple un-ordered collection of items.
 
-- Ternary Search Tries: A really nice data structure somewhere between
-  hash tables and search trees.  Both performance and speed is
-  comparable to hash tables, but they have unique properties much like
-  indexed tries without the space overhead (e.g., you can store
-  Unicode strings in them without wasting memory).  They are ideal for
-  managing dictionaries to implement sound-alike words and partial
-  matches (as in auto-correct applications).
+- Ternary Search Trees: A really nice data structure somewhere between
+  hash tables and tries.  Both performance and speed is comparable to
+  hash tables, but they have unique properties much like indexed tries
+  without the space overhead (e.g., you can store Unicode strings in
+  them without wasting memory).  They are ideal for managing
+  dictionaries to implement sound-alike words and partial matches (as
+  in auto-correct applications).
 
 - Red-Black Trees
 

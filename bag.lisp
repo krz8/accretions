@@ -18,82 +18,49 @@
 ;;; However, I won't deny that the bag class exists mostly to test
 ;;; some aspects of the Accretions implementation.
 
-(defclass bag ()
+(defclass bag (item-collection counted)
   ((items :accessor items :initform nil
 	  :documentation "The actual list maintained as the collection
 	   of items in the bag."))
   (:documentation "A bag is a simple collection of items, implemented
   here using a plain list."))
 
-(defun make-bag ()
+(defun make-bag (&key (test #'equal))
   "Returns a new bag object to which items can be added, and whose
-  contents can be reviewed."
-  (make-instance 'bag))
+  contents can be reviewed.  By defaut, items in the returned bag
+  will be compared with EQUAL during operations such as CONTAINSP,
+  but another function can be specified with the :TEST keyword."
+  (make-instance 'bag :test test))
 
 (defmethod emptyp ((bag bag))
   "Return T if the supplied bag contains nothing."
   (null (items bag)))
 
-(defmethod add (item (bag bag))
-  "Adds an ITEM to the supplied BAG, returning true on success."
+(defmethod add ((bag bag) &key item &allow-other-keys)
+  "Adds ITEM to the supplied BAG, returning true on success."
   (setf (items bag) (cons item (items bag)))
   t)
 
 (defmethod mapfun (function (bag bag))
   "Invoke FUNCTION once for every item in the supplied BAG, passing
-  that item as its single argument.  Always returns true."
+  an item as its single argument each time.  Always returns true."
   (mapc function (items bag))
   t)
 
-(defmethod make-iterator (bag)
-  "Returns a function that iterates over the contents of the supplied
-  THING.  Each call to the returned function will return two values:
-  one of the items in THING, and T.  After all items have been
-  returned, further calls to the iterating function will return the
-  values NIL and NIL.  The second value, then, indicates whether the
-  first value is from the THING or not.
+;; We allow the user to store NIL in the bag.  If we didn't, CONTAINSP
+;; could be a simple call to FIND.  We could use POSITION, but that function
+;; typically incurs a tiny penalty in tracking an index as it progresses.
+;; So, we'll DO it ourselves.
 
-  The returned iterating function also accepts one of two optional
-  keyword arguments:
-
-  :PEEK can be used to return values without advancing the iterator.
-
-  :RESET can be used to move the iterator back to its initial state."
-  (let ((cursor (items bag)))
-    (dlambda
-     (:peek () (values (car cursor) (and cursor t)))
-     (:reset () (setf cursor (items bag))
-	        t)
-     (t () (let ((old cursor))
-	      (setf cursor (cdr cursor))
-	      (values (car old) (and old t)))))))
-
-;; We allow the user to store NIL in the bag.  If we didn't, CONTAIN
-;; would be a simple call to
-;; 
-;;    (find item (items bag) :test test)
-;;
-;; But that won't work if the user stores NIL in the bag and later
-;; looks for it.  So, we'll do this in a slightly slower way, but one
-;; that allows us to always return a useful true or false value.
-
-(defmethod contains (item (bag bag) &key (test #'equal))
-  "Returns T if the BAG contains ITEM, according to TEST; otherwise,
-  returns NIL.  The default test function is EQUAL unless overriden
-  with the :TEST keyword argument."
-  (do ((x (items bag) (cdr x)))
-      ((null x) nil)
-    (when (funcall test (car x) item)
-      (return-from contains t))))
-
-(defclass counted-bag (bag counted)
-  ()
-  (:documentation "Like a simple BAG, but also supports returning the
-  number of objects contained via SIZE."))
-
-(defun make-counted-bag ()
-  "Returns a new counted bag object to which items can be added, and
-  whose contents can be reviewed.  Unlike a plain bag, the counted
-  bag also supports the SIZE generic function, returning the number of
-  items in the bag at any point in time."
-  (make-instance 'counted-bag))
+(defmethod containsp ((bag bag) &key (item nil itemp) &allow-other-keys)
+  "Returns T if the BAG contains the item specified to the :ITEM
+  keyword argument."
+  (if itemp
+      (let ((test (test bag)))
+	(do ((x (items bag) (cdr x)))
+	    ((null x) nil)
+	  (when (funcall test (car x) item)
+	    (return-from containsp t))))
+      (error 'missing-item
+	     :gfname 'containsp
+	     :collection bag)))

@@ -7,8 +7,8 @@
 ;;; of their target system that aren't necessarily portable to all
 ;;; systems.  Primarily, they encode the ASCII NUL string terminator
 ;;; as part of their keys; this has the advantage of making the words
-;;; "a" and "at" distinct from each other; "a\#Null" is distinct from
-;;; the "a" that is a part of "at\#Null".  Simply disregarding those
+;;; "a" and "at" distinct from each other; "a\0" is distinct from
+;;; the "a" that is a part of "at\0".  Simply disregarding those
 ;;; nulls would make it impossible (well, very hard, anyway) to
 ;;; distinguish between an "a" that appears in the tree on the way to
 ;;; "at" and the simple word "a". Likewise, their implementation does

@@ -22,3 +22,5 @@
 			     `(cdr ,args)))))
 	    dargs)))))
 
+(defmacro strcat (&rest strings)
+  `(concatenate 'string ,@strings))
