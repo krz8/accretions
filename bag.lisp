@@ -36,10 +36,15 @@
   "Return T if the supplied bag contains nothing."
   (null (items bag)))
 
-(defmethod add ((bag bag) &key item &allow-other-keys)
+(defmethod add ((bag bag) &key (item nil itemp) &allow-other-keys)
   "Adds ITEM to the supplied BAG, returning true on success."
-  (setf (items bag) (cons item (items bag)))
-  t)
+  (cond
+    (itemp
+     (setf (items bag) (cons item (items bag)))
+     t)
+    (t
+     (error 'missing-item :gfname 'add :collection bag)
+     nil)))
 
 (defmethod mapfun (function (bag bag))
   "Invoke FUNCTION once for every item in the supplied BAG, passing
@@ -56,11 +61,12 @@
   "Returns T if the BAG contains the item specified to the :ITEM
   keyword argument."
   (if itemp
-      (let ((test (test bag)))
+      (let ((test (testfn bag)))
 	(do ((x (items bag) (cdr x)))
 	    ((null x) nil)
 	  (when (funcall test (car x) item)
 	    (return-from containsp t))))
       (error 'missing-item
 	     :gfname 'containsp
-	     :collection bag)))
+	     :collection bag))
+  nil)

@@ -2,9 +2,9 @@
 (in-package #:accretions)
 
 (defclass item-collection ()
-  ((test :accessor test :initarg :test
-	 :documentation "The function to use when testing two items for
-         equality in the collection."))
+  ((testfn :accessor testfn :initarg :test
+	   :documentation "The function to use when testing two items for
+           equality in the collection."))
   (:default-initargs :test #'equal)
   (:documentation "Collections of single items \(e.g., bags\) use this
   as a superclass.  This assists in the implementation of default
@@ -14,7 +14,7 @@
 		      &key (item nil itemp) &allow-other-keys)
   "The default method for collections of items, based on MAPFUN."
   (if itemp
-      (let ((test (test collection)))
+      (let ((test (testfn collection)))
 	(mapfun (lambda (x) (when (funcall test x item)
 			      (return-from containsp t)))
 		collection))
@@ -24,12 +24,12 @@
   nil)
 
 (defclass pair-collection ()
-  ((key-test :accessor key-test :initarg :key-test
-	     :documentation "The function to use when comparing keys in
-             the collection.")
-   (value-test :accessor value-test :initarg :value-test
-	       :documentation "The function to use when comparing values in
-               the collection."))
+  ((key-testfn :accessor key-testfn :initarg :key-test
+	       :documentation "The function to use when comparing keys in
+               the collection.")
+   (value-testfn :accessor value-testfn :initarg :value-test
+		 :documentation "The function to use when comparing values in
+                 the collection."))
   (:default-initargs :key-test #'equal :value-test #'equal)
   (:documentation "Collections of key/value pairs use this as a
   superclass.  This assists in the implementation of default methods
@@ -52,19 +52,19 @@
   ;; only see the error once.
   (let ((fn (if keyp
 		(if valuep
-		    (let ((ktest (key-test collection))
-			  (vtest (value-test collection)))
+		    (let ((ktest (key-testfn collection))
+			  (vtest (value-testfn collection)))
 		      (lambda (k v)
 			(when (and (funcall ktest k key)
 				   (funcall vtest v value))
 			  (return-from containsp t))))
-		    (let ((ktest (key-test collection)))
+		    (let ((ktest (key-testfn collection)))
 		      (lambda (k v)
 			(declare (ignore v))
 			(when (funcall ktest k key)
 			  (return-from containsp t)))))
 		(if valuep
-		    (let ((vtest (value-test collection)))
+		    (let ((vtest (value-testfn collection)))
 		      (lambda (k v)
 			(declare (ignore k))
 			(when (funcall vtest v value)
