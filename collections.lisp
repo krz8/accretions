@@ -74,3 +74,23 @@
 			   :collection collection)))))
     (mapfun fn collection))
   nil)
+
+(defclass kvc-with-element-tests ()
+  ((el-test-< :accessor el-test-< :initarg :el-test-<
+	      :documentaion "Names a function used to compare elements
+	      within the KEY.")
+   (el-test-= :accessor el-test-= :initarg :el-test-=
+	      :documentaion "Names a function used to compare elements
+	      within the KEY.")
+   (el-test-> :accessor el-test-> :initarg :el-test->
+	      :documentaion "Names a function used to compare elements
+	      within the KEY."))
+  (:default-initargs :el-test-< #'char< :el-test-= #'char= :el-test-> #'char>)
+  (:documentation "Adds comparison functions for individual elements
+  of the keys, this is most useful for tree structures that need to
+  break down keys.  For example, while PAIR-COLLECTION might have
+  EQUAL or STRING= as its key comparison function,
+  KVC-WITH-ELEMENT-TESTS would add CHAR<, CHAR=, and CHAR> to the set.
+
+  As the default of PAIR-COLLECTION is assumed to use strings for
+  keys, the defaults for KVC-WITH-ELEMENT-TESTS are character based."))
