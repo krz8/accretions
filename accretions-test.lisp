@@ -80,5 +80,12 @@
     (is-false (acr:containsp b :item "FOOBAR"))
     (is-false (acr:containsp b :item ""))))
 
+(test (add-oops :depends-on add)
+  (let ((b (acr:make-bag)))
+    (signals acr:missing-item
+      (acr:add b))
+    (signals acr:missing-item
+      (acr:containsp b))))
+
 (def-suite tst :description "ternary search trees" :in all)
 (in-suite tst)

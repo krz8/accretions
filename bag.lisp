@@ -22,8 +22,7 @@
   ((items :accessor items :initform nil
 	  :documentation "The actual list maintained as the collection
 	   of items in the bag."))
-  (:documentation "A bag is a simple collection of items, implemented
-  here using a plain list."))
+  (:documentation "A bag is a simple unordered collection of items."))
 
 (defun make-bag (&key (test #'equal))
   "Returns a new bag object to which items can be added, and whose
@@ -40,7 +39,7 @@
   "Adds ITEM to the supplied BAG, returning true on success."
   (cond
     (itemp
-     (setf (items bag) (cons item (items bag)))
+     (push item (items bag))
      t)
     (t
      (error 'missing-item :gfname 'add :collection bag)
