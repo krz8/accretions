@@ -6,8 +6,9 @@
 ;;; class.
 
 (defclass counted ()
-  ((sz :accessor sz :initarg :sz :initform 0 :type integer
+  ((sz :accessor sz :initarg :sz :type integer
        :documentation "A simple counter, incremented on ADD operations."))
+  (:default-initargs :sz 0)
   (:documentation "A mixin that adds sizes (counts) to various
   collections.  When ADD is successful for such a collection, the
   count of items therein is incremented."))
