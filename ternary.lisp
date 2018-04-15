@@ -64,7 +64,7 @@
 		     :termp nil :value nil)
   (:documentation "Implements every node in a ternary search tree."))
 
-(defclass tst-root (kve-collection tst-node)
+(defclass tst (kve-collection tst-node counted)
   ()
   (:documentation "The root of a ternary search tree is a node in that
   tree.  It also contains extra information used throughout that tree,
@@ -112,7 +112,7 @@
 
   - :VALUE-TEST specifies a function for comparing values in the tree.
     The default test is #'EQUAL."
-  (make-instance 'tst-root
+  (make-instance 'tst
 		 :key-test (or key-test
 			       (and ignore-case #'string-equal)
 			       #'string=)
@@ -129,20 +129,20 @@
 				   (and ignore-case #'char-greaterp)
 				   #'char>)))
 
-(defmethod emptyp ((collection tst-root))
+(defmethod emptyp ((tst tst))
   "Returns non-NIL if the specified ternary search tree is empty."
-  (null (eqkid tst-root)))
+  (null (eqkid tst)))
 
-(defmacro with-tst-context ((tstroot) &body body)
+(defmacro with-tst-context ((tst) &body body)
   "Common code that sets up a context used in several functions for
   operating on a ternary search tree.  Essentially, this takes
   information out of our root node, caching it in the local lexical
   environment."
-  `(let ((kel< (key-el-test< ,tstroot))
-	 (kel= (key-el-test= ,tstroot))
-	 (kel> (key-el-test> ,tstroot))
-	 (ktest (key-test ,tstroot))
-	 (vtest (value-test ,tstroot)))
+  `(let ((kel< (key-el-test< ,tst))
+	 (kel= (key-el-test= ,tst))
+	 (kel> (key-el-test> ,tst))
+	 (ktest (key-testfn ,tst))
+	 (vtest (value-testfn ,tst)))
      (declare (ignorable kel< kel= kel> ktest vtest))
      (macrolet ((kel< (x y) `(funcall kel< ,x ,y))
 		(kel= (x y) `(funcall kel= ,x ,y))
@@ -151,9 +151,51 @@
 		(value= (x y) `(funcall vtest ,x ,y)))
        ,@body)))
 
-(defmethod add ((tst tst-root) &key key value unique &allow-other-keys)
-  "Adds a new key/value pair to the ternary search tree at TST.  Returns T unless a problem arises.  If the specified key already exists in TST, its value is silently overridden with the new value unless :UNIQUE is non-NIL, in which case a "
-  t)
+;; A tree at eqid implies that we have a split character.  When eqid
+;; is null, we consider this node to be brand new and without a split.
+
+(defun add* (tst key value unique)
+  (with-tst-context (tst)
+    (let ((keylen (length key)))
+      (labels ((insert (i node)
+		 (cond
+		   ((< i keylen)
+		    (let ((e (elt key i)))
+		      (cond
+			((null (eqkid node))
+			 (let ((new (make-instance 'tst-node)))
+			   (insert (1+ i)
+				   (setf (split node) e
+					 (eqkid node) new))))
+			((kel= e (split node))
+			 (insert (1+ i) (eqkid node)))
+			((kel< e (split node))
+			 (insert i (lokid node)))
+			(t
+			 (insert i (hikid node))))))
+		   (t
+		    (setf (value node) value
+			  (termp node) t)))))
+	(insert 0 tst)))
+    ))
+
+(defmethod add ((tst tst) &key (key nil keyp) value unique &allow-other-keys)
+  "Adds a new key/value pair to the ternary search tree at TST.
+  Returns T unless a problem arises.  If the specified key already
+  exists in TST, its value is silently overridden with the supplied
+  VALUE unless :UNIQUE is non-NIL."
+  (cond
+    ((null keyp)
+     (error 'missing-key :gfname 'add :collection tst)
+     nil)
+    ((not (typep key 'sequence))
+     (error 'key-not-a-sequence-error :key key :gfname 'add :collection tst)
+     nil)
+    ((zerop (length key))
+     (error 'zero-length-key :key key :gfname 'add :collection tst)
+     nil)
+    (t
+     (add* tst key value unique))))
 
 ;; (defun tst-insert (key tst)
 ;;   "Insert the supplied KEY sequence into the ternary search tree TSTROOT."
@@ -174,8 +216,24 @@
 ;; 	     node)))
 ;;       (insert 0 tst))))
 
-;; ;; can't work we aren't handling the "root node" correctly
+(defmethod containsp ((tst tst) &key (key nil keyp) (value nil valuep)
+				  &allow-other-keys)
+  "Searches the ternary search tree TST for something, returning T if it
+  is found.  Something can be:
 
-;; (defmethod emptyp ((tst tst-root))
-;;   "Returns true when the ternary search tree TST is empty."
-;;   (null (tree tst)))
+  - Specified by :KEY, in which case any entry found with a matching
+    key \(regardless of its value\) yields a true result.
+
+  - Specified by :VALUE, in which case any entry found with a value
+    \(regardless of its key\) yields a true result.
+
+  - Specified both :KEY and :VALUE, in which any an entry whose key
+    and value must match for a true result."
+  t)
+
+(defmethod mapfun (function (tst tst))
+  "Call FUNCTION for each entry in the ternary search tree TST.
+  FUNCTION should accept two arguments, a key and its associated
+  value, on each invocation.  The return value from FUNCTION is
+  ignored, and MAPFUN always returns T unless an error occurs."
+  t)

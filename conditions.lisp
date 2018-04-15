@@ -21,6 +21,14 @@
                             the collection ~s."
 		     (gfname condition) (collection condition)))))
 
+(define-condition missing-key (base-error)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "An :KEY keyword argument must be supplied ~
+                            to the generic function ~a when operating on ~
+                            the collection ~s."
+		     (gfname condition) (collection condition)))))
+
 (define-condition missing-key-or-value (base-error)
   ()
   (:report (lambda (condition stream)
@@ -41,6 +49,15 @@
 	     (format stream "The key ~s was supplied to the generic ~
                             function ~a, but the collection ~s ~
                             requires its keys to be sequences."
+		     (key condition) (gfname condition)
+		     (collection condition)))))
+
+(define-condition zero-length-key (key-error)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "The key ~s supplied to the generic function ~
+	                    ~a for collection ~s must have a non-zero ~
+                            length."
 		     (key condition) (gfname condition)
 		     (collection condition)))))
 
