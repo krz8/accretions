@@ -35,14 +35,8 @@
   superclass.  This assists in the implementation of default methods
   of certain generic functions, such as CONTAINSP."))
 
-<<<<<<< Updated upstream
 (defmethod containsp ((collection pair-collection)
 		      &key (key nil keyp) (value nil valuep))
-=======
-(defmethod containsp ((collection kv-collection)
-		      &key (key nil keyp) (value nil valuep)
-			&allow-other-keys)
->>>>>>> Stashed changes
   "The default method for collections of key/value pairs, based on MAPFUN.
   Better methods may be supplied that exploit aspects of specific
   collection types, but this method should do in a pinch for all of
