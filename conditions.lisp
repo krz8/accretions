@@ -1,22 +1,19 @@
 ;;;; the few conditions used by Accretions
 (in-package #:accretions)
 
-(define-condition collection-error (error)
+(define-condition base-error (error)
   ((collection :initarg :collection :reader collection
 	       :documentation "The collection being manipulated when
-	       the error occured."))
-  (:default-initargs :collection nil)  
-  (:documentation "Tracks a collection used in an error condition."))
-
-(define-condition generic-function-error (error)
-  ((gfname :initarg :gfname :reader gfname
+	       the error occured.")
+   (gfname :initarg :gfname :reader gfname
 	   :documentation "The name of the generic function in use
 	   when the error occured."))
-  (:default-initargs :gfname nil)  
-  (:documentation "Tracks the name of a generic function used in an
-  error condition."))
+  (:default-initargs :collection nil :gfname nil)
+  (:documentation "Errors that arise in ACCRETIONS generally include
+                  a collection and a generic function in their
+                  context."))
 
-(define-condition missing-item (collection-error generic-function-error)
+(define-condition missing-item (base-error)
   ()
   (:report (lambda (condition stream)
 	     (format stream "An :ITEM keyword argument must be supplied ~
@@ -24,13 +21,38 @@
                             the collection ~s."
 		     (gfname condition) (collection condition)))))
 
-(define-condition missing-key-value (collection-error generic-function-error)
+(define-condition missing-key-or-value (base-error)
   ()
   (:report (lambda (condition stream)
 	     (format stream "A :KEY or a :VALUE keyword argument (or both) ~
                             must be supplied to the generic function ~a ~
                             when operating on the collection ~s."
 		     (gfname condition) (collection condition)))))
+
+(define-condition key-error (base-error)
+  ((key :initarg :key :reader key
+	:documentation "Names the KEY that was supplied."))
+  (:default-initargs :key nil)
+  (:documentation "Adds a KEY slot to BASE-ERROR, that's all."))
+
+(define-condition key-not-a-sequence-error (key-error)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "The key ~s was supplied to the generic ~
+                            function ~a, but the collection ~s ~
+                            requires its keys to be sequences."
+		     (key condition) (gfname condition)
+		     (collection condition)))))
+
+(define-condition non-unique (key-error)
+  ()
+  (:report (lambda (condition stream)
+	     (format stream "They key ~s was supplied to the generic ~
+                            function ~a, but it was found to already ~
+                            exist in the collection ~s while :UNIQUE ~
+                            was specified."
+		     (key condition) (gfname condition)
+		     (collection condition)))))
 
 
 ;; (define-condition base-error (error)

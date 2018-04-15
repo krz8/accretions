@@ -59,110 +59,114 @@
 		     :termp nil :value nil)
   (:documentation "Implements every node in a ternary search tree."))
 
-(defclass tst-root (pair-collection kvc-with-element-tests tst-node)
+(defclass tst-root (kve-collection tst-node)
   ()
   (:documentation "The root of a ternary search tree is a node in that
   tree.  It also contains extra information used throughout that tree,
-  such as functions to compare elements of key sequences.  Use
-  MAKE-TST to create new root nodes in client code \(that is, to
-  create new ternary search trees\), rather than MAKE-INSTANCE."))
+  such as functions to compare elements of key sequences.  Generally,
+  you should use MAKE-TST to create new root nodes in client code
+  \(that is, to create new ternary search trees\), rather than
+  MAKE-INSTANCE."))
 
-(defun make-tst (&key ignore-case key-test value-test el-test-<
-		   el-test-= el-test>)
-  "Creates and returns a new \(empty\) ternary search tree.  With
-  no options, MAKE-TST returns a tree that expects strings as keys,
-  performs case-sensitive comparisons of key values, and uses EQUAL
-  to compare values \(such as when searching for a particular value
-  via the CONTAINSP generic function\).
+(defun make-tst (&key ignore-case key-test value-test key-el-test<
+		   key-el-test= key-el-test>)
+  "Creates and returns a new \(empty\) ternary search tree.  With no
+  options, MAKE-TST returns a tree that expects strings as keys,
+  performs case-sensitive comparisons of those key values, and uses
+  EQUAL to compare values \(such as when searching for a particular
+  value via the CONTAINSP generic function\).
 
-  However, other key and value tests can be specified:
+  However, other key and value tests can be specified, to support any
+  sequence as a key and anything as its associated value.  To wit:
 
-- :IGNORE-CASE, when non-NIL, sets the tree to perform
-  case-insensitive character comparisons on its keys.  This is
-  shorthand for specifying #'EQUALP for both :KEY-TEST
-  and :VALUE-TEST, and for specifying #'CHAR-LESSP, #'CHAR-EQUAL, and
-  #'CHAR-GREATERP as arguments to :EL-TEST-<, :EL-TEST-=,
-  and :EL-TEST->, respectively.
+  - By default, #'STRING= is used to test keys for equality.  #'CHAR=,
+    #'CHAR<, and #'CHAR> are used to test elements of keys.  #'EQUAL
+    is used to test the values associated with keys for equality.  So
+    long as the key is a sequence whose elements can be accessed via
+    ELT, any type of key can be supported \(not just text\) in the
+    trie by setting appropriate functions below.
 
-- :KEY-TEST specifies a function for comparing whole keys in the tree.
-  The default test is #'EQUAL.
+  - :IGNORE-CASE, when non-NIL, sets the tree to perform
+    case-insensitive string and character comparisons on its keys.
+    Thus, #'STRING-EQUAL, #'CHAR-EQUAL, #'CHAR-LESSP, #'CHAR-GREATERP,
+    and #'EQUALP are set as the functions to perform comparisons
+    between keys \(strings\), key elements \(characters\), and their
+    values.
 
-- :TEST=, when non-NIL, specifies a function that compares two
-  elements of a key sequence, returning true when the first argument
-  should be considered equal \(or at least equivalent\) with the
-  other.  Overrides :IGNORE-CASE.
+  - :KEY-TEST specifies a function for comparing keys in the tree. The
+    default test is #'STRING=.
 
-- :TEST<, when non-NIL, specifies a function that compares two
-  elements of a key sequence, returning true when the first argument
-  should be considered \"less\" than the other.  Overrides :IGNORE-CASE.
+  - :KEY-EL-TEST= specifies a function for comparing individual
+    elements of a key sequence.  The default test is #'CHAR=.
 
-- :TEST>, when non-NIL, specifies a function that compares two
-  elements of a key sequence, returning true when the first argument
-  should be considered \"less\" than the other.  Overrides :IGNORE-CASE.
+  - :KEY-EL-TEST< specifies a function for comparing individual
+    elements of a key sequence.  The default test is #'CHAR<.
 
-- :VALUE-TEST specifies a function for comparing values \(not keys\)
-  in the tree.  This happens rarely, but is crucial to generic
-  functions such as CONTAINSP.  The default comparison is #'EQUAL.
-  Using :IGNORE-CASE \(which this overrides\) sets this to #'EQUALP."
+  - :KEY-EL-TEST> specifies a function for comparing individual
+    elements of a key sequence.  The default test is #'CHAR>.
+
+  - :VALUE-TEST specifies a function for comparing values in the tree.
+    The default test is #'EQUAL."
   (make-instance 'tst-root
 		 :key-test (or key-test
-			       (and ignore-case #'equalp)
-			       #'equal)
+			       (and ignore-case #'string-equal)
+			       #'string=)
 		 :value-test (or value-test
 				 (and ignore-case #'equalp)
 				 #'equal)
-		 :el-test-= (or el-test-=
-				(and ignore-case #'char-equal)
-				#'char=)
-		 :el-test-< (or el-test-<
-				(and ignore-case #'char-lessp)
-				#'char<)
-		 :el-test-> (or el-test->
-				(and ignore-case #'char-greaterp)
-				#'char>)))
+		 :key-el-test= (or key-el-test=
+				   (and ignore-case #'char-equal)
+				   #'char=)
+		 :key-el-test< (or key-el-test<
+				   (and ignore-case #'char-lessp)
+				   #'char<)
+		 :key-el-test> (or key-el-test>
+				   (and ignore-case #'char-greaterp)
+				   #'char>)))
 
 (defmacro with-tst-context ((tstroot) &body body)
   "Common code that sets up a context used in several functions for
   operating on a ternary search tree.  Essentially, this takes
   information out of our root node, caching it in the local lexical
   environment."
-  `(let ((el<fn (el-test-< ,tstroot))
-	 (el=fn (el-test-= ,tstroot))
-	 (el>fn (el-test-> ,tstroot))
+  `(let ((kel< (key-el-test< ,tstroot))
+	 (kel= (key-el-test= ,tstroot))
+	 (kel> (key-el-test> ,tstroot))
 	 (ktest (key-test ,tstroot))
 	 (vtest (value-test ,tstroot)))
-     (declare (ignorable el<fn el=fn el>fn ktest vtest))
-     (macrolet ((el< (x y) `(funcall el<fn ,x ,y))
-		(el= (x y) `(funcall el=fn ,x ,y))
-		(el> (x y) `(funcall el>fn ,x ,y))
+     (declare (ignorable kel< kel= kel> ktest vtest))
+     (macrolet ((kel< (x y) `(funcall kel< ,x ,y))
+		(kel= (x y) `(funcall kel= ,x ,y))
+		(kel> (x y) `(funcall kel> ,x ,y))
 		(key= (x y) `(funcall ktest ,x ,y))
 		(value= (x y) `(funcall vtest ,x ,y)))
        ,@body)))
 
+(defmethod add ((tst tst-root) &key key value unique &allow-other-keys)
+  "Adds a new key/value pair to the ternary search tree at TST.  Returns T unless a problem arises.  If the specified key already exists in TST, its value is silently overridden with the new value unless :UNIQUE is non-NIL, in which case a "
+  t)
 
+;; (defun tst-insert (key tst)
+;;   "Insert the supplied KEY sequence into the ternary search tree TSTROOT."
+;;   (with-tst-context (tst)
+;;     (labels
+;; 	((insert (i node)
+;; 	   (let ((el (elt key i)))
+;; 	     (when (null node)
+;; 	       (setf node (make-instance 'tst-node :split el)))
+;; 	     (cond
+;; 	       ((test< el (split node))
+;; 		(setf (lokid node) (insert (lokid node) i)))
+;; 	       ((test> el (split node))
+;; 		(setf (hikid node) (insert (hikid node) i)))
+;; 	       ((< i (1- (length key)))
+;; 		(setf (eqkid node) (insert (eqkid node) (1+ i))))
+;; 	       (t t))
+;; 	     node)))
+;;       (insert 0 tst))))
 
+;; ;; can't work we aren't handling the "root node" correctly
 
-(defun tst-insert (key tst)
-  "Insert the supplied KEY sequence into the ternary search tree TSTROOT."
-  (with-tst-context (tst)
-    (labels
-	((insert (i node)
-	   (let ((el (elt key i)))
-	     (when (null node)
-	       (setf node (make-instance 'tst-node :split el)))
-	     (cond
-	       ((test< el (split node))
-		(setf (lokid node) (insert (lokid node) i)))
-	       ((test> el (split node))
-		(setf (hikid node) (insert (hikid node) i)))
-	       ((< i (1- (length key)))
-		(setf (eqkid node) (insert (eqkid node) (1+ i))))
-	       (t t))
-	     node)))
-      (insert 0 tst))))
-
-;; can't work we aren't handling the "root node" correctly
-
-(defmethod emptyp ((tst tst-root))
-  "Returns true when the ternary search tree TST is empty."
-  (null (tree tst)))
+;; (defmethod emptyp ((tst tst-root))
+;;   "Returns true when the ternary search tree TST is empty."
+;;   (null (tree tst)))
