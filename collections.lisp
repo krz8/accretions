@@ -11,7 +11,7 @@
   methods of certain generic functions, such as CONTAINSP."))
 
 (defmethod containsp ((collection item-collection)
-		      &key (item nil itemp) &allow-other-keys)
+		      &key (item nil itemp))
   "The default method for collections of items, based on MAPFUN."
   (if itemp
       (let ((test (testfn collection)))
@@ -36,8 +36,7 @@
   of certain generic functions, such as CONTAINSP."))
 
 (defmethod containsp ((collection pair-collection)
-		      &key (key nil keyp) (value nil valuep)
-			&allow-other-keys)
+		      &key (key nil keyp) (value nil valuep))
   "The default method for collections of key/value pairs, based on MAPFUN.
   Better methods may be supplied that exploit aspects of specific
   collection types, but this method should do in a pinch for all of
@@ -77,13 +76,13 @@
 
 (defclass kvc-with-element-tests ()
   ((el-test-< :accessor el-test-< :initarg :el-test-<
-	      :documentaion "Names a function used to compare elements
+	      :documentation "Names a function used to compare elements
 	      within the KEY.")
    (el-test-= :accessor el-test-= :initarg :el-test-=
-	      :documentaion "Names a function used to compare elements
+	      :documentation "Names a function used to compare elements
 	      within the KEY.")
    (el-test-> :accessor el-test-> :initarg :el-test->
-	      :documentaion "Names a function used to compare elements
+	      :documentation "Names a function used to compare elements
 	      within the KEY."))
   (:default-initargs :el-test-< #'char< :el-test-= #'char= :el-test-> #'char>)
   (:documentation "Adds comparison functions for individual elements

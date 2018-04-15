@@ -11,33 +11,21 @@
   (:documentation "Returns true when COLLECTION is empty, containing
   nothing."))
 
-(defgeneric add (collection &key item key value tail)
-  (:documentation "Adds something to COLLECTION, returning a true value
-  unless there was a problem.  When adding to a COLLECTION of single
-  items \(such as a BAG\), use the :ITEM keyword to specify the item
-  being added to the collection.  When adding to a COLLECTION of key
-  and value pairs, use the keywords :KEY and :VALUE accordingly.
-  When the COLLECTION maintains a \"head\" and \"tail\", use the
-  :TAIL keyword with a non-NIL value to specify addition at the tail
-  of the collection instead of its head."))
+(defgeneric add (collection &key &allow-other-keys)
+  (:documentation "Adds something to COLLECTION, specified by keywords
+  specific to each method, returning a true value unless there was a
+  problem."))
 
 (defgeneric mapfun (function collection)
   (:documentation "Calls FUNCTION once for every item present within
-  COLLECTION.  When MAPFUN is called for a collection of items,
-  FUNCTION should expect to be called with a single argument.  When
-  MAPFUN is invoked for a collection of key/value pairs, FUNCTION
-  should expect to be called with two arguments, a key value followed
-  by its associated value.  The return value of FUNCTION is ignored,
-  and MAPFUN returns T so long as no errors occur."))
+  COLLECTION.  The expected lambda list for FUNCTION varies depending
+  on which method of MAPFUN is invoked.  The return value of FUNCTION
+  is ignored, and MAPFUN returns T so long as no errors occur."))
 
-(defgeneric containsp (collection &key item key value)
-  (:documentation "Returns T when COLLECTION has at least one instance
-  of the supplied ITEM, KEY, or VALUE, or both; otherwise returns NIL.
-  When searching collections of items, use the :ITEM keyword to
-  specify the item to be sought in the collection.  When searching
-  collections of key/value pairs, use :KEY or :VALUE to search; you
-  can supply both to test for pairs instead of just one or the
-  other."))
+(defgeneric containsp (collection &key &allow-other-keys)
+  (:documentation "Searches the supplied COLLECTION for some specific
+  item, key, value, or key/value pair \(the exact keywords are unique
+  to each method of CONTAINSP\), returning T when a match is found."))
 
 (defgeneric size (collection)
   (:documentation "Returns the number of items currently held within

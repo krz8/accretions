@@ -17,11 +17,10 @@
   "Returns the number of items held within the supplied COLLECTION."
   (sz collection))
 
-;; It's okay for these to be after methods and not around methods.  If
-;; the primary ADD method fails, raising some error, the after method
-;; will never be triggered and the count shouldn't be off.  So, be
-;; sure that the primary ADD methods signal failure and don't simply
-;; return NIL.
-
-(defmethod add :after ((collection counted) &key &allow-other-keys)
+#+nil
+(defmethod add :after ((collection counted))
   (incf (sz collection)))
+
+(defmethod add :around ((collection counted))
+  (when (call-next-method)
+    (incf (sz collection))))

@@ -35,8 +35,9 @@
   "Return T if the supplied bag contains nothing."
   (null (items bag)))
 
-(defmethod add ((bag bag) &key (item nil itemp) &allow-other-keys)
-  "Adds ITEM to the supplied BAG, returning true on success."
+(defmethod add ((bag bag) &key (item nil itemp))
+  "Adds an item to the supplied BAG, specified by the :ITEM keyword,
+  returning true on success."
   (cond
     (itemp
      (push item (items bag))
@@ -56,8 +57,8 @@
 ;; typically incurs a tiny penalty in tracking an index as it progresses.
 ;; So, we'll DO it ourselves.
 
-(defmethod containsp ((bag bag) &key (item nil itemp) &allow-other-keys)
-  "Returns T if the BAG contains the item specified to the :ITEM
+(defmethod containsp ((bag bag) &key (item nil itemp))
+  "Returns T if the BAG contains the item specified by the :ITEM
   keyword argument."
   (if itemp
       (let ((test (testfn bag)))
