@@ -18,9 +18,9 @@
   (sz collection))
 
 #+nil
-(defmethod add :after ((collection counted))
+(defmethod add :after ((collection counted) &key &allow-other-keys)
   (incf (sz collection)))
 
-(defmethod add :around ((collection counted))
+(defmethod add :around ((collection counted) &key &allow-other-keys)
   (when (call-next-method)
     (incf (sz collection))))

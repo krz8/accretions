@@ -35,6 +35,11 @@
 ;;;   elements of the keys).  We also use the presence of a node to
 ;;;   mark that a given key element actually exists (rather than
 ;;;   overloading the meaning of null, as in the C implementation).
+;;;
+;;; - We use a "terminated here?" (termp) slot that is set non-NIL in
+;;;   the tree when we're at a point that defines a specific key in the
+;;;   trie.  In this way, the path "ate" could contain "a" as a separate
+;;;   word in the trie.
 
 (defclass tst-node ()
   ((split :accessor split :initarg :split
@@ -123,6 +128,10 @@
 		 :key-el-test> (or key-el-test>
 				   (and ignore-case #'char-greaterp)
 				   #'char>)))
+
+(defmethod emptyp ((collection tst-root))
+  "Returns non-NIL if the specified ternary search tree is empty."
+  (null (eqkid tst-root)))
 
 (defmacro with-tst-context ((tstroot) &body body)
   "Common code that sets up a context used in several functions for

@@ -35,7 +35,7 @@
   superclass.  This assists in the implementation of default methods
   of certain generic functions, such as CONTAINSP."))
 
-(defmethod containsp ((collection pair-collection)
+(defmethod containsp ((collection kv-collection)
 		      &key (key nil keyp) (value nil valuep))
   "The default method for collections of key/value pairs, based on MAPFUN.
   Better methods may be supplied that exploit aspects of specific
