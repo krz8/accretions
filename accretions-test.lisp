@@ -89,3 +89,57 @@
 
 (def-suite tst :description "ternary search trees" :in all)
 (in-suite tst)
+
+(test make-tst
+  (let ((tst (acr:make-tst)))
+    (is (not (null tst)))
+    (is (typep tst 'acr:tst))
+    (is (eql (acr::key-testfn tst) #'string=))
+    (is (eql (acr::value-testfn tst) #'equal))
+    (is (eql (acr::key-el-test= tst) #'char=))
+    (is (eql (acr::key-el-test< tst) #'char<))
+    (is (eql (acr::key-el-test> tst) #'char>))))
+
+(test (make-tst-ignore-case :depends-on make-tst)
+  (let ((tst (acr:make-tst :ignore-case t)))
+    (is (not (null tst)))
+    (is (typep tst 'acr:tst))
+    (is (eql (acr::key-testfn tst) #'string-equal))
+    (is (eql (acr::value-testfn tst) #'equalp))
+    (is (eql (acr::key-el-test= tst) #'char-equal))
+    (is (eql (acr::key-el-test< tst) #'char-lessp))
+    (is (eql (acr::key-el-test> tst) #'char-greaterp))))
+
+(test (make-tst-tests :depends-on make-tst)
+  (let ((tst (acr:make-tst :key-test #'equal :value-test #'eql
+			   :key-el-test= #'eq :key-el-test< #'=
+			   :key-el-test> #'equalp)))
+    (is (not (null tst)))
+    (is (typep tst 'acr:tst))
+    (is (eql (acr::key-testfn tst) #'equal))
+    (is (eql (acr::value-testfn tst) #'eql))
+    (is (eql (acr::key-el-test= tst) #'eq))
+    (is (eql (acr::key-el-test< tst) #'=))
+    (is (eql (acr::key-el-test> tst) #'equalp)))
+  (let ((tst (acr:make-tst :ignore-case t :key-test #'equal :value-test #'eql
+			   :key-el-test= #'eq :key-el-test< #'=
+			   :key-el-test> #'equalp)))
+    (is (not (null tst)))
+    (is (typep tst 'acr:tst))
+    (is (eql (acr::key-testfn tst) #'equal))
+    (is (eql (acr::value-testfn tst) #'eql))
+    (is (eql (acr::key-el-test= tst) #'eq))
+    (is (eql (acr::key-el-test< tst) #'=))
+    (is (eql (acr::key-el-test> tst) #'equalp))))
+
+(test (emptyp :depends-on make-tst)
+  (let ((tst (acr:make-tst)))
+    (is-true (acr:emptyp tst))
+    (setf (acr::split tst) #\a
+	  (acr::termp tst) t)
+    (is-false (acr:emptyp tst))))
+
+(test (add :depends-on emptyp)
+  (let ((tst (acr:make-tst)))
+    (is-true (acr:add tst :key "foo" :value "bar"))
+    (is (= 1 (acr:size tst)))))

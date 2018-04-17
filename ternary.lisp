@@ -129,9 +129,16 @@
 				   (and ignore-case #'char-greaterp)
 				   #'char>)))
 
+(defun tst-emptyp (tst-node)
+  "Returns true if the specified node or root of a ternary search tree
+  is empty.  You should probably use the generic function EMPTYP
+  instead of this."
+  (not (or (eqkid tst-node)
+	   (termp tst-node))))
+
 (defmethod emptyp ((tst tst))
-  "Returns non-NIL if the specified ternary search tree is empty."
-  (null (eqkid tst)))
+  "Returns true if the specified ternary search tree is empty."
+  (tst-emptyp tst))
 
 (defmacro with-tst-context ((tst) &body body)
   "Common code that sets up a context used in several functions for
@@ -151,71 +158,78 @@
 		(value= (x y) `(funcall vtest ,x ,y)))
        ,@body)))
 
-;; A tree at eqid implies that we have a split character.  When eqid
-;; is null, we consider this node to be brand new and without a split.
-
-(defun add* (tst key value unique)
+(defun tst-add (tst key value unique)
+  "TST-ADD adds a new KEY and VALUE to the ternary search tree TST,
+  overwriting pre-existing values unless UNIQUE is non-NIL.  This
+  function skips all the safety checks performed by the TST method for
+  the generic function ADD; use it judiciously."
   (with-tst-context (tst)
     (let ((keylen (length key)))
       (labels ((insert (i node)
-		 (cond
-		   ((< i keylen)
-		    (let ((e (elt key i)))
+		 (let ((e (elt key i)))
+		   (cond
+		     ((tst-emptyp node)	; (null (eqkid node))
+		      (print "*** 1")
 		      (cond
-			((null (eqkid node))
+			((= i (1- keylen))
+			 (print "*** 11")
+			 (setf (split node) e
+			       (value node) value
+			       (termp node) t))
+			(t		; (< i keylen)
+			 (print "*** 12")
 			 (let ((new (make-instance 'tst-node)))
-			   (insert (1+ i)
-				   (setf (split node) e
-					 (eqkid node) new))))
-			((kel= e (split node))
-			 (insert (1+ i) (eqkid node)))
-			((kel< e (split node))
-			 (insert i (lokid node)))
+			   (setf (eqkid node) new
+				 (split node) e)
+			   (insert (1+ i) new)))))
+		     ((kel= (split node) e)
+		      (print "*** 2")
+		      (cond
+			((= i (1- keylen))
+			 (print "*** 21")
+			 (setf (value node) value
+			       (termp node) t))
 			(t
-			 (insert i (hikid node))))))
-		   (t
-		    (setf (value node) value
-			  (termp node) t)))))
-	(insert 0 tst)))
-    ))
+			 (print "*** 22")
+			 (insert (1+ i) (eqkid node)))))
+		     ((kel< (split node) e)
+		      (print "*** 3")
+		      (cond
+			((null (lokid node))
+			 (print "*** 31")
+			 (let ((new (make-instance 'tst-node)))
+			   (setf (lokid node) new)
+			   (insert i new)))
+			(t
+			 (print "*** 32")
+			 (insert i (lokid node)))))
+		     (t
+		      (print "*** 4")
+		      (cond
+			((null (hikid node))
+			 (print "*** 41")
+			 (let ((new (make-instance 'tst-node)))
+			   (setf (hikid node) new)
+			   (insert i new)))
+			(t
+			 (print "*** 42")
+			 (insert i (hikid node)))))))))
+	(insert 0 tst)))))
 
 (defmethod add ((tst tst) &key (key nil keyp) value unique &allow-other-keys)
   "Adds a new key/value pair to the ternary search tree at TST.
   Returns T unless a problem arises.  If the specified key already
   exists in TST, its value is silently overridden with the supplied
   VALUE unless :UNIQUE is non-NIL."
-  (cond
-    ((null keyp)
-     (error 'missing-key :gfname 'add :collection tst)
-     nil)
-    ((not (typep key 'sequence))
-     (error 'key-not-a-sequence-error :key key :gfname 'add :collection tst)
-     nil)
-    ((zerop (length key))
-     (error 'zero-length-key :key key :gfname 'add :collection tst)
-     nil)
-    (t
-     (add* tst key value unique))))
+  (unless keyp
+    (error 'missing-key :gfname 'add :collection tst))
+  (assert (typep key 'sequence) (key)
+	  'key-not-a-sequence-error :key key :gfname 'add :collection tst)
+  (assert (plusp (length key)) (key)
+	  'bad-key-length :key key :gfname 'add :collection tst)
+  (tst-add tst key value unique))
 
-;; (defun tst-insert (key tst)
-;;   "Insert the supplied KEY sequence into the ternary search tree TSTROOT."
-;;   (with-tst-context (tst)
-;;     (labels
-;; 	((insert (i node)
-;; 	   (let ((el (elt key i)))
-;; 	     (when (null node)
-;; 	       (setf node (make-instance 'tst-node :split el)))
-;; 	     (cond
-;; 	       ((test< el (split node))
-;; 		(setf (lokid node) (insert (lokid node) i)))
-;; 	       ((test> el (split node))
-;; 		(setf (hikid node) (insert (hikid node) i)))
-;; 	       ((< i (1- (length key)))
-;; 		(setf (eqkid node) (insert (eqkid node) (1+ i))))
-;; 	       (t t))
-;; 	     node)))
-;;       (insert 0 tst))))
-
+#+nil
 (defmethod containsp ((tst tst) &key (key nil keyp) (value nil valuep)
 				  &allow-other-keys)
   "Searches the ternary search tree TST for something, returning T if it
@@ -236,4 +250,4 @@
   FUNCTION should accept two arguments, a key and its associated
   value, on each invocation.  The return value from FUNCTION is
   ignored, and MAPFUN always returns T unless an error occurs."
-  t)
+  )
