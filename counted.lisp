@@ -6,21 +6,28 @@
 ;;; class.
 
 (defclass counted ()
-  ((sz :accessor sz :initarg :sz :type integer
-       :documentation "A simple counter, incremented on ADD operations."))
-  (:default-initargs :sz 0)
-  (:documentation "A mixin that adds sizes (counts) to various
+  ((cnt :accessor cnt :initform 0 :type integer
+	:documentation "A simple counter, incremented and decremented
+	on ADD and DEL operations, respectively."))
+  (:documentation "A mixin that adds counts (sizes) to various
   collections.  When ADD is successful for such a collection, the
-  count of items therein is incremented."))
+  count therein is incremented; similarly, DEL may reduce the count of
+  a collection."))
 
-(defmethod size ((collection counted))
+(defmethod count ((collection counted))
   "Returns the number of items held within the supplied COLLECTION."
-  (sz collection))
-
-#+nil
-(defmethod add :after ((collection counted) &key &allow-other-keys)
-  (incf (sz collection)))
+  (count collection))
 
 (defmethod add :around ((collection counted) &key &allow-other-keys)
-  (when (call-next-method)
-    (incf (sz collection))))
+  "Increments the count of things in the supplied collection by the
+  number of things added via the primary ADD method."
+  (let ((n (call-next-method)))
+    (incf (count collection) n)
+    n))
+
+(defmethod del :around ((collection counted) &key &allow-other-keys)
+  "This wrapper method decrements the count of things in the supplied
+  COLLECTION based on the primary DEL method's result."
+  (let ((n (call-next-method)))
+    (decf (count collection) n)
+    n))

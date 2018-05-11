@@ -9,7 +9,7 @@
 	   :documentation "The name of the generic function in use
 	   when the error occured."))
   (:default-initargs :collection nil :gfname nil)
-  (:documentation "Errors that arise in ACCRETIONS generally include
+  (:documentation "Errors that arise in Accretions generally include
                   a collection and a generic function in their
                   context."))
 

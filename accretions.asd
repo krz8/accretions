@@ -22,5 +22,6 @@
 	       (:file "conditions" :depends-on ("generics"))
 	       (:file "collections" :depends-on ("conditions"))
 	       (:file "counted" :depends-on ("conditions"))
-	       (:file "bag" :depends-on ("counted"))
+	       #+nil (:file "bag" :depends-on ("counted"))
+	       #+nil (:file "deque" :depends-on ("counted"))
 	       #+nil (:file "ternary" :depends-on ("counted" "valued"))))

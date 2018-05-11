@@ -1,6 +1,15 @@
 ;;;; bag support
 (in-package #:accretions)
 
+;;;; THIS FILE IS DEPRECATED
+;;;;
+;;;; There are two different bag implementations, which optimize certain
+;;;; operations over others.  This file is not used any longer.
+
+
+
+
+
 ;;; A bag is just a collection of items that you can later review;
 ;;; also known as a multiset in some circles.  There is no explicit
 ;;; order within a bag.  More, when working through the contents of a

@@ -5,4 +5,5 @@
 	   #:collection-error #:collection #:generic-function-error #:gfname
 	   #:missing-item #:missing-key-value
 	   #:bag #:make-bag
+	   #:deque #:make-deque
 	   #:tst #:make-tst))

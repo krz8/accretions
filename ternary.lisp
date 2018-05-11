@@ -189,7 +189,7 @@
 			 (print "*** 21")
 			 (setf (value node) value
 			       (termp node) t))
-			(t
+ 			(t
 			 (print "*** 22")
 			 (insert (1+ i) (eqkid node)))))
 		     ((kel< (split node) e)

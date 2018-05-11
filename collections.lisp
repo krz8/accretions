@@ -2,27 +2,32 @@
 (in-package #:accretions)
 
 (defclass item-collection ()
-  ((testfn :accessor testfn :initarg :test
-	   :documentation "The function to use when testing two items for
-           equality in the collection."))
+  ((test :reader test :initarg :test
+	 :documentation "The function to use when testing two items
+	 for equality in the collection.  EQUAL is used by default."))
   (:default-initargs :test #'equal)
-  (:documentation "Collections of single items \(e.g., bags\) use this
-  as a superclass.  This assists in the implementation of default
-  methods of certain generic functions, such as CONTAINSP."))
+  (:documentation "Collections of single items \(e.g., bags, deques\)
+  use this as a superclass, defining a default function to use when
+  testing equality between items."))
 
 (defmethod containsp ((collection item-collection)
-		      &key (item nil itemp))
-  "The default method for collections of items, based on MAPFUN."
+		      &key (item nil itemp) test)
+  "The default method for collections of items, based on MAPFUN.
+  Returns T when at least one instance of the :ITEM keyword appears in
+  the named COLLECTION.  Returns NIL if no such item could be found,
+  or if an error arises and the condition is suppressed.  This is a
+  default implementation, other item collections may provide their own
+  specific methods.  Use the :TEST keyword to provide a function of
+  two arguments to test equality instead of the default function used
+  in COLLECTION."
   (if itemp
-      (let ((test (testfn collection)))
-	(mapfun (lambda (x) (when (funcall test x item)
-			      (return-from containsp t)))
-		collection))
-      (error 'missing-item
-	     :gfname 'containsp
-	     :collection collection))  
+      (let ((test (or test (test collection))))
+	(mapfun collection (lambda (x) (when (funcall test x item)
+					 (return-from containsp t)))))
+      (error 'missing-item :gfname 'containsp :collection collection))  
   nil)
 
+#+nil
 (defclass kv-collection ()
   ((key-testfn :accessor key-testfn :initarg :key-test
 	       :documentation "The function to use when comparing keys in
@@ -35,6 +40,7 @@
   superclass.  This assists in the implementation of default methods
   of certain generic functions, such as CONTAINSP."))
 
+#+nil
 (defmethod containsp ((collection kv-collection)
 		      &key (key nil keyp) (value nil valuep))
   "The default method for collections of key/value pairs, based on MAPFUN.
@@ -72,6 +78,7 @@
     (mapfun fn collection))
   nil)
 
+#+nil
 (defclass kve-collection (kv-collection)
   ((key-el-test< :accessor key-el-test< :initarg :key-el-test<
 		 :documentation "Names a function used to compare elements
