@@ -24,7 +24,7 @@
 (define-condition missing-key (base-error)
   ()
   (:report (lambda (condition stream)
-	     (format stream "An :KEY keyword argument must be supplied ~
+	     (format stream "A :KEY keyword argument must be supplied ~
                             to the generic function ~a when operating on ~
                             the collection ~s."
 		     (gfname condition) (collection condition)))))
