@@ -1,10 +1,15 @@
-;;;; the few conditions used by Accretions
-(in-package #:accretions)
+;;;; the conditions used by Accretions
+(in-package #:accretions-conds)
 
 (define-condition base-error (error)
   ((collection :initarg :collection :reader collection
 	       :documentation "The collection being manipulated when
-	       the error occured.")
+	       the error occured.  This is often displyed via
+	       PRINT-OBJECT in error messages.  With that, an error
+	       message will display the actual collection class
+	       involved in the error, rather than leaving the caller
+	       to guess which method on a base class applies to a
+	       derived class's error.")
    (gfname :initarg :gfname :reader gfname
 	   :documentation "The name of the generic function in use
 	   when the error occured."))

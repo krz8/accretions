@@ -9,12 +9,11 @@
   :mailto "RobertKrzaczek+cl@gmail.com"
   :homepage "http://github.com/krz8/accretions/"
   :long-description "Accretions provides a growing set of alternative
-  data structures, such as ternary search tries, used in various
-  applications that aren't present in the Common Lisp standard.  Some
-  of these are, undoubtedly, provided by various CL implentations, but
-  they are unmeasured in performance and cannot be relied upon to
-  exist everywhere by portable software.  Accretions seeks to address
-  that situation."
+  data structures, such as ternary search tries, that aren't present
+  in the Common Lisp standard.  Some of these are, undoubtedly,
+  provided by various CL implentations, but they are unmeasured in
+  performance and cannot be relied upon to exist everywhere by
+  portable software.  Accretions seeks to address that situation."
 
   :components ((:file "pkg")
 	       (:file "misc" :depends-on ("pkg"))
