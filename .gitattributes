@@ -1,0 +1,13 @@
+# I hate having to do this, but some lisps (e.g., SBCL) expect Unix
+# line endings even in a Windows environment.  Others (e.g., CCL)
+# don't seem to have this problem, or at least they cover it up well
+# enough that it doesn't become a problem.
+# 
+# Until this is resolved acceptably well, we'll just tell git to
+# ensure Unix line endings everywhere.  This will probably cause
+# problems for someone developing under Windows with a native IDE.
+
+* text=auto
+*.md text
+*.lisp eol=lf
+*.asd eol=lf
