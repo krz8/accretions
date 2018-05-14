@@ -9,5 +9,6 @@
 
 * text=auto
 *.md text
+*.yml text
 *.lisp eol=lf
 *.asd eol=lf
