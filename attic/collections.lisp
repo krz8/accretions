@@ -1,4 +1,4 @@
-;;;; definitions of general "kinds" of collections
+;;;; definitions of general kinds of collections
 (in-package #:accretions)
 
 (defclass item-collection ()
@@ -6,11 +6,10 @@
 	 :documentation "The function to use when testing two items
 	 for equality in the collection.  EQUAL is used by default."))
   (:default-initargs :test #'equal)
-  (:documentation "Collections of single items \(i.e., those without
-  separate keys and values\) use this as a superclass.  TEST is the
-  default function to use when testing equality between items."))
+  (:documentation "Collections of single items \(e.g., bags, deques\)
+  use this as a superclass, defining a default function to use when
+  testing equality between items."))
 
-#+nil
 (defmethod containsp ((collection item-collection)
 		      &key (item nil itemp) test)
   "The default method for collections of items, based on MAPFUN.
@@ -30,18 +29,16 @@
 
 #+nil
 (defclass kv-collection ()
-  ((key-testfn :reader key-testfn :initarg :key-test
+  ((key-testfn :accessor key-testfn :initarg :key-test
 	       :documentation "The function to use when comparing keys in
                the collection.")
-   (value-testfn :reader value-testfn :initarg :value-test
+   (value-testfn :accessor value-testfn :initarg :value-test
 		 :documentation "The function to use when comparing values in
                  the collection."))
   (:default-initargs :key-test #'string= :value-test #'equal)
   (:documentation "Collections of key/value pairs use this as a
   superclass.  This assists in the implementation of default methods
-  of certain generic functions, such as CONTAINSP.  The default type
-  for keys are strings, but any type can be supported via suitable
-  values to KEY-TESTFN."))
+  of certain generic functions, such as CONTAINSP."))
 
 #+nil
 (defmethod containsp ((collection kv-collection)
@@ -83,19 +80,17 @@
 
 #+nil
 (defclass kve-collection (kv-collection)
-  ((key-el< :reader key-el< :initarg :key-el<
-	    :documentation "Names a function used to compare elements
-	    within the KEY.")
-   (key-el= :reader key-el= :initarg :key-el=
-	    :documentation "Names a function used to compare elements
-	    within the KEY.")
-   (key-el> :reader key-el> :initarg :key-el>
-	    :documentation "Names a function used to compare elements
-	    within the KEY."))
-  (:default-initargs :key-el< #'char< :key-el= #'char= :key-el> #'char>)
+  ((key-el-test< :accessor key-el-test< :initarg :key-el-test<
+		 :documentation "Names a function used to compare elements
+	         within the KEY.")
+   (key-el-test= :accessor key-el-test= :initarg :key-el-test=
+		 :documentation "Names a function used to compare elements
+	         within the KEY.")
+   (key-el-test> :accessor key-el-test> :initarg :key-el-test>
+		 :documentation "Names a function used to compare elements
+	         within the KEY."))
+  (:default-initargs :key-el-test< #'char< :key-el-test= #'char=
+		     :key-el-test> #'char>)
   (:documentation "Adds comparison functions for individual elements
   of keys to the KV-COLLECTION class.  This is necessary to tree
-  structures that need to break down keys by element.  Default values
-  support the case-sensitive use of strings as keys, but by supplying
-  alternative functions for KEY-EL<, KEY-EL=, KEY-EL>, and KEY-TESTFN
-  \(see KV-COLLECTION\), sequences of any type can be used."))
+  structures that need to break down keys by element."))

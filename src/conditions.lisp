@@ -1,15 +1,13 @@
-;;;; the conditions used by Accretions
-(in-package #:accretions-conds)
+(defpackage :accretions/src/conditions
+  (:use :common-lisp)
+  (:export #:base-error #:missing-item #:missing-key #:missing-key-or-value #:key-value
+	   #:key-not-a-sequence-error #:bad-key-length #:non-unique))
+(in-package :accretions/src/conditions)
 
 (define-condition base-error (error)
   ((collection :initarg :collection :reader collection
 	       :documentation "The collection being manipulated when
-	       the error occured.  This is often displyed via
-	       PRINT-OBJECT in error messages.  With that, an error
-	       message will display the actual collection class
-	       involved in the error, rather than leaving the caller
-	       to guess which method on a base class applies to a
-	       derived class's error.")
+	       the error occured.")
    (gfname :initarg :gfname :reader gfname
 	   :documentation "The name of the generic function in use
 	   when the error occured."))
@@ -29,7 +27,7 @@
 (define-condition missing-key (base-error)
   ()
   (:report (lambda (condition stream)
-	     (format stream "A :KEY keyword argument must be supplied ~
+	     (format stream "An :KEY keyword argument must be supplied ~
                             to the generic function ~a when operating on ~
                             the collection ~s."
 		     (gfname condition) (collection condition)))))
@@ -75,7 +73,6 @@
                             was specified."
 		     (key condition) (gfname condition)
 		     (collection condition)))))
-
 
 ;; (define-condition base-error (error)
 ;;   ((fmtstr :initarg :fmtstr :reader fmtstr
