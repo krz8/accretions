@@ -8,13 +8,11 @@
 ;;; as we can, so these all live over here.
 
 (defgeneric add (collection &key &allow-other-keys)
-  (:documentation "To the supplied COLLECTION, add something specified
-  by keywords specific to each method, returning the number of things
-  added unless there was a problem.  Typically, errors are reported
-  via a condition, but if conditions are suppressed by the caller,
-  this function will return zero.  Note that unlike most other generic
-  functions in Accretions, ADD and DEL have integer return values,
-  using 0 to indicate failures."))
+  (:documentation "To the supplied COLLECTION, add something described
+  by keywords specific to each method.  When the addition is
+  successful, ADD will return a true value.  Typically, errors are
+  reported via a condition, but if conditions are suppressed by the
+  caller, this function will return NIL \(false\)."))
 
 ;; (defgeneric containsp (collection &key &allow-other-keys)
 ;;   (:documentation "Searches the supplied COLLECTION for some specific

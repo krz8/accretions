@@ -1,4 +1,4 @@
-;;;; definitions of general kinds of collections
+;;;; definitions of general "kinds" of collections
 (in-package #:accretions)
 
 (defclass item-collection ()
@@ -6,10 +6,11 @@
 	 :documentation "The function to use when testing two items
 	 for equality in the collection.  EQUAL is used by default."))
   (:default-initargs :test #'equal)
-  (:documentation "Collections of single items \(e.g., bags, deques\)
-  use this as a superclass, defining a default function to use when
-  testing equality between items."))
+  (:documentation "Collections of single items \(i.e., those without
+  separate keys and values\) use this as a superclass.  TEST is the
+  default function to use when testing equality between items."))
 
+#+nil
 (defmethod containsp ((collection item-collection)
 		      &key (item nil itemp) test)
   "The default method for collections of items, based on MAPFUN.

@@ -4,6 +4,14 @@
 (defmacro strcat (&rest strings)
   `(concatenate 'string ,@strings))
 
+(defmacro awhen (test &body body)
+  "Anaphoric WHEN: Evaluates the TEST form once.  If true \(not NIL\),
+  body forms are then evaluated with the result of TEST bound to the
+  symbol IT."
+  `(let ((it ,test))
+     (when it
+       ,@body)))
+
 (defmacro dlambda (&rest dargs)
   "A wrapper around LAMBDA that includes scaffolding that supports
   dispatch functionality in the generated function's first argument.
