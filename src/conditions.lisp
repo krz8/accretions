@@ -1,4 +1,4 @@
-(defpackage :accretions/src/conditions
+(uiop:define-package :accretions/src/conditions
   (:use :common-lisp)
   (:export #:base-error #:missing-item #:missing-key #:missing-key-or-value #:key-value
 	   #:key-not-a-sequence-error #:bad-key-length #:non-unique))

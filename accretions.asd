@@ -9,16 +9,15 @@
   :long-description "Accretions provides a growing set of alternative
   data structures, such as ternary search tries, used in various
   applications that aren't present in the Common Lisp standard.  Some
-  of these are, undoubtedly, provided by various CL implentations, but
-  they are unmeasured in performance and cannot be relied upon to
-  exist everywhere by portable software.  Accretions seeks to address
+  of these are provided by various CL implementations, certainly, but
+  they cannot be relied upon to exist everywhere by portable software
+  \(and performance is often not known\).  Accretions seeks to address
   that situation."
 
   :class :package-inferred-system
   :defsystem-depends-on (:asdf-package-system)
-  :in-order-to ((test-op (load-op "accretions/test/all")))
-  :perform (test-op (o c) (symbol-call :accretions/test/all :test-suite))
   :depends-on ("accretions/src/all")
+  :in-order-to ((test-op (test-op "accretions/test/all")))
 
   ;; :components ((:file "pkg")
   ;; 	       (:file "misc" :depends-on ("pkg"))

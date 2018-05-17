@@ -1,4 +1,4 @@
-(defpackage :accretions/src/generics
+(uiop:define-package :accretions/src/generics
   (:use :common-lisp)
   (:export #:add #:size))
 (in-package :accretions/src/generics)

@@ -1,6 +1,7 @@
-(defpackage :acr/src/misc
+(uiop:define-package :accretions/src/misc
   (:use :common-lisp)
   (:export #:strcat #:dlambda))
+(in-package :accretions/src/misc)
 
 (defmacro strcat (&rest strings)
   `(concatenate 'string ,@strings))
