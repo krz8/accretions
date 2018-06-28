@@ -6,14 +6,14 @@
 
 (defmacro awhen (test &body body)
   "Anaphoric WHEN: Evaluates the TEST form once.  If true \(not NIL\),
-  body forms are then evaluated with the result of TEST bound to the
+  BODY forms are then evaluated with the result of TEST bound to the
   symbol IT."
   `(let ((it ,test))
      (when it
        ,@body)))
 
 (defmacro dlambda (&rest dargs)
-  "A wrapper around LAMBDA that includes scaffolding that supports
+  "A wrapper around LAMBDA that includes scaffolding supporting
   dispatch functionality in the generated function's first argument.
   This is based on Doug Hoyte's discussion and implementation from his
   book \"Let Over Lambda,\" which is the best reference for how to use

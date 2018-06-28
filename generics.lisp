@@ -5,7 +5,7 @@
 ;;; more sense to maintain context and place them near their various
 ;;; method definitions.  But, in the case of Accretions, we want to share
 ;;; the same family of generic functions across as many different types
-;;; as we can, so these all live over here.
+;;; as we can, so these declarations all live over here.
 
 (defgeneric add (collection &key &allow-other-keys)
   (:documentation "To the supplied COLLECTION, add something described

@@ -6,10 +6,10 @@
 	       :documentation "The collection being manipulated when
 	       the error occured.  This is often displyed via
 	       PRINT-OBJECT in error messages.  With that, an error
-	       message will display the actual collection class
-	       involved in the error, rather than leaving the caller
-	       to guess which method on a base class applies to a
-	       derived class's error.")
+	       message will usually display the most specific
+	       sub-class for the collection involved in the error,
+	       rather than leaving the caller to guess which method on
+	       a base class applies to a derived class's error.")
    (gfname :initarg :gfname :reader gfname
 	   :documentation "The name of the generic function in use
 	   when the error occured."))
