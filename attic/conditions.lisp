@@ -1,5 +1,5 @@
-;;;; the conditions used by Accretions
-(in-package #:accretions-conds)
+;;;; the few conditions used by Accretions
+(in-package #:accretions)
 
 (define-condition base-error (error)
   ((collection :initarg :collection :reader collection
@@ -29,7 +29,7 @@
 (define-condition missing-key (base-error)
   ()
   (:report (lambda (condition stream)
-	     (format stream "A :KEY keyword argument must be supplied ~
+	     (format stream "An :KEY keyword argument must be supplied ~
                             to the generic function ~a when operating on ~
                             the collection ~s."
 		     (gfname condition) (collection condition)))))

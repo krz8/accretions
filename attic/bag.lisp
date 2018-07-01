@@ -62,12 +62,9 @@
   t)
 
 ;; We allow the user to store NIL in the bag.  If we didn't, CONTAINSP
-;; could be a simple call to FIND, at the cost of being unable to
-;; distinguish between "not found" and "found your NIL right over
-;; here".  We could use POSITION, but that function typically incurs a
-;; penalty in tracking an index as it progresses, but that penalty
-;; should be tiny (it's just an accumulator) as long as BAG is
-;; counted.  No matter, we'll simply DO it ourselves.
+;; could be a simple call to FIND.  We could use POSITION, but that function
+;; typically incurs a tiny penalty in tracking an index as it progresses.
+;; So, we'll DO it ourselves.
 
 (defmethod containsp ((bag bag) &key (item nil itemp))
   "Returns T if the BAG contains the item specified by the :ITEM

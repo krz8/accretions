@@ -1,5 +1,7 @@
-;;;; generic function declarations
-(in-package #:accretions)
+(uiop:define-package :accretions/src/generics
+  (:use :common-lisp)
+  (:export #:add #:size))
+(in-package :accretions/src/generics)
 
 ;;; Normally, I don't put generics in their own file; it usually makes
 ;;; more sense to maintain context and place them near their various
@@ -8,18 +10,25 @@
 ;;; as we can, so these declarations all live over here.
 
 (defgeneric add (collection &key &allow-other-keys)
-  (:documentation "To the supplied COLLECTION, add something described
-  by keywords specific to each method.  When the addition is
-  successful, ADD will return a true value.  Typically, errors are
-  reported via a condition, but if conditions are suppressed by the
-  caller, this function will return NIL \(false\)."))
+  (:documentation "To the supplied COLLECTION, add something specified
+  by keywords specific to each method, returning the number of things
+  added unless there was a problem.  Typically, errors are reported
+  via a condition, but if conditions are suppressed by the caller,
+  this function will return zero.  Note that unlike most other generic
+  functions in Accretions, ADD and DEL have integer return values,
+  using 0 to indicate failures."))
+
+(defgeneric size (collection)
+  (:documentation "Returns the number of items currently held within
+  the supplied COLLECTION."))
+
 
 ;; (defgeneric containsp (collection &key &allow-other-keys)
 ;;   (:documentation "Searches the supplied COLLECTION for some specific
 ;;   item, key, value, or key/value pair \(the exact keywords are unique
 ;;   to each method of CONTAINSP\), returning T when a match is found.
-;;   If you are looking for \"search-and-something\" functionality, in
-;;   order to perform some operation on one or more matches, consider the
+;;   If you are looking for a \"search\" functionality, in order to
+;;   perform some operation on one or more matches, consider the
 ;;   combination of MAPFUN with a function that uses RETURN-FROM;
 ;;   CONTAINSP is just a shortcut for a common idiom."))
 
@@ -36,22 +45,20 @@
 ;;   NIL; otherwise, the new collection is returned."))
 
 ;; (defgeneric count (collection &key &allow-other-keys)
-;;   (:documentation "Returns a non-negative integer indicating the
-;;   number of times that the supplied COLLECTION contains some thing
-;;   that matches search criteria \(determined by keywords specific to
+;;   (:documentation "Returns an integer \(zero or positive\) indicating
+;;   the number of times that the supplied COLLECTION contains some thing
+;;   that matches search criteria \(specified by keywords specific to
 ;;   different methods\)."))
 
 ;; (defgeneric del (collection &key &allow-other-keys)
-;;   (:documentation "Deletes from a COLLECTION some number of things,
-;;   determined by the supplied arguments.  This is a destructive
-;;   operation.  A number of different arguments may be presented in
-;;   order to control aspects of the deletion; be sure to consult the
-;;   method of DEL that is specific to your COLLECTION.  The number of
-;;   items deleted from the collection is returned.  Note that unlike
-;;   most other generic functions in Accretions, ADD and DEL have integer
-;;   return values, using 0 to indicate failures."))
-
-;; ;; secondary return value from del could be a list of the deleted things
+;;   (:documentation "Deletes from a COLLECTION those things that were
+;;   previously ADDed.  This is a destructive operation.  A number of
+;;   different arguments may be presented in order to control aspects of
+;;   the deletion; be sure to consult the method of DEL that is specific
+;;   to your COLLECTION.  The number of items deleted from the collection
+;;   is returned.  Note that unlike most other generic functions in
+;;   Accretions, ADD and DEL have integer return values, using 0 to
+;;   indicate failures."))
 
 ;; (defgeneric emptyp (collection)
 ;;   (:documentation "Returns T when COLLECTION is empty, containing
@@ -66,6 +73,3 @@
 ;;   arguments of MAPFUN are reversed from the typical MAP and MAPC
 ;;   functions defined by Common Lisp."))
 
-;; (defgeneric size (collection)
-;;   (:documentation "Returns the number of items currently held within
-;;   the supplied COLLECTION."))

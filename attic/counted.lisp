@@ -16,21 +16,18 @@
 
 (defmethod count ((collection counted))
   "Returns the number of items held within the supplied COLLECTION."
-  (cnt collection))
+  (count collection))
 
 (defmethod add :around ((collection counted) &key &allow-other-keys)
-  "Increments the count of things in the supplied collection when the
-  primary ADD method is successful.  This was originally a simple
-  :AFTER method, but changed to an :AROUND method so that any error
-  suppression or continuations during the primary method don't throw
-  us off."
-  (awhen (call-next-method)
-    (incf (cnt collection))
-    it))
+  "Increments the count of things in the supplied collection by the
+  number of things added via the primary ADD method."
+  (let ((n (call-next-method)))
+    (incf (count collection) n)
+    n))
 
-;; (defmethod del :around ((collection counted) &key &allow-other-keys)
-;;   "This wrapper method decrements the count of things in the supplied
-;;   COLLECTION based on the primary DEL method's result."
-;;   (let ((n (call-next-method)))
-;;     (decf (count collection) n)
-;;     n))
+(defmethod del :around ((collection counted) &key &allow-other-keys)
+  "This wrapper method decrements the count of things in the supplied
+  COLLECTION based on the primary DEL method's result."
+  (let ((n (call-next-method)))
+    (decf (count collection) n)
+    n))
