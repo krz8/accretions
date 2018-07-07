@@ -1,7 +1,9 @@
-(uiop:define-package :accretions/src/conditions
+#-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
+(defpackage :accretions/src/conditions
   (:use :common-lisp)
-  (:export #:base-error #:missing-item #:missing-key #:missing-key-or-value #:key-value
-	   #:key-not-a-sequence-error #:bad-key-length #:non-unique))
+  (:export #:base-error #:missing-item #:missing-key #:missing-key-or-value
+	   #:key-value #:key-not-a-sequence-error #:bad-key-length
+	   #:not-unique))
 (in-package :accretions/src/conditions)
 
 (define-condition base-error (error)
@@ -64,14 +66,13 @@
 		     (key condition) (gfname condition)
 		     (collection condition)))))
 
-(define-condition non-unique (key-error)
+(define-condition not-unique (key-error)
   ()
   (:report (lambda (condition stream)
-	     (format stream "They key ~s was supplied to the generic ~
-                            function ~a, but it was found to already ~
-                            exist in the collection ~s while :UNIQUE ~
-                            was specified."
-		     (key condition) (gfname condition)
+	     (format stream "They key ~s, supplied to the generic function ~a ~
+                            already exists in the collection ~a, but that key ~
+                            is expected to be unique." 
+		     (key condition) (gfname condition) 
 		     (collection condition)))))
 
 ;; (define-condition base-error (error)

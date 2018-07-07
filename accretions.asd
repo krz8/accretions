@@ -1,6 +1,6 @@
 #-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
 (defsystem "accretions"
-  :description "a collection of fast performant data structures"
+  :description "a collection of performant data structures"
   :version "0.1.0"
   :license "MIT"
   :author "Bob Krzaczek"
@@ -12,7 +12,8 @@
   of these are provided by various CL implementations, certainly, but
   they cannot be relied upon to exist everywhere by portable software
   \(and performance is often not known\).  Accretions seeks to address
-  that situation."
+  that situation, providing solid implementations of its algorithms
+  and data structures."
 
   :class :package-inferred-system
   :defsystem-depends-on (:asdf-package-system)
