@@ -1,3 +1,4 @@
+#-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
 (uiop:define-package :accretions/src/queue
   (:use :common-lisp :accretions/src/generics :accretions/src/collections)
   (:export :queue))

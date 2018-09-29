@@ -1,4 +1,3 @@
-#-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
 (defpackage :accretions/src/misc
   (:use :common-lisp)
   (:export #:strcat #:awhen #:dlambda))

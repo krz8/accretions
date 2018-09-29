@@ -1,6 +1,6 @@
 #-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
-(defsystem "accretions"
-  :description "a collection of performant data structures"
+(defsystem :accretions
+  :description "Accretions is a collection of performant data structures."
   :version "0.1.0"
   :license "MIT"
   :author "Bob Krzaczek"
@@ -17,8 +17,8 @@
 
   :class :package-inferred-system
   :defsystem-depends-on (:asdf-package-system)
-  :depends-on ("accretions/src/all")
-  :in-order-to ((test-op (test-op "accretions/test/all")))
+  :depends-on (:accretions/src/all)
+  :in-order-to ((test-op (test-op :accretions/test/all)))
 
   ;; :components ((:file "pkg")
   ;; 	       (:file "misc" :depends-on ("pkg"))

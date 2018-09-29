@@ -1,5 +1,5 @@
-(uiop:define-package :accretions/src/collections
-  (:use :common-lisp :accretions/src/misc)
+(defpackage :accretions/src/collections
+  (:use :common-lisp)
   (:export #:item-collection #:test
 	   #:kv-collection #:key-test #:value-test
 	   #:kve-collection #:key-el-test< #:key-el-test= #:key-el-test>))
@@ -11,8 +11,7 @@
 	 for equality in the collection.  EQUAL is used by default."))
   (:default-initargs :test #'equal)
   (:documentation "Collections of single items \(i.e., not key/value
-  pairs\) use this as a superclass, defining a default function to use
-  when testing equality between values in that collection."))
+  pairs\) use this as a superclass."))
 
 #+nil
 (defmethod containsp ((collection item-collection)
@@ -45,7 +44,7 @@
   between values.  This assists in the implementation of default
   methods of certain generic functions, such as CONTAINSP."))
 
-#+nil
+ #+nil
 (defmethod containsp ((collection kv-collection)
 		      &key (key nil keyp) (value nil valuep))
   "The default method for collections of key/value pairs, based on MAPFUN.
@@ -97,7 +96,8 @@
 		     :key-el-test> #'char>)
   (:documentation "Adds comparison functions for individual elements
   of keys to the KV-COLLECTION class.  This is necessary to tree
-  structures that need to break down keys by element.  Three
-  functions, instead of simple equality, are defined here because if
-  you're working with the individual elements of a key, you're almost
-  certainly sorting or ordering those keys in some manner."))
+  structures that need to break down keys by element.  This class
+  supplies three more comparisons functions, in addition to simple
+  equality, because if you're working with the individual elements of
+  a key, you're almost certainly sorting or ordering those keys in
+  some manner."))

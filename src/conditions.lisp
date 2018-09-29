@@ -1,4 +1,3 @@
-#-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
 (defpackage :accretions/src/conditions
   (:use :common-lisp)
   (:export #:base-error #:missing-item #:missing-key #:missing-key-or-value
