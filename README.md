@@ -25,9 +25,10 @@ Functionality
 
 ### What You Get
 
-#### Structures
+#### Structures (Types)
 
-- Bags (Multisets): A simple un-ordered collection of items.
+- Bags (aka Multisets): A simple un-ordered collection of values.  Duplicate
+  values are maintained.
 
 - Ternary Search Trees: A really nice data structure somewhere between
   hash tables and tries.  Both performance and speed is comparable to
@@ -42,6 +43,29 @@ Functionality
 - more as I need them and study them; feel free to suggest something!
 
 #### API
+
+At the top level, the Accretions system provides a set of collection
+types, a set of generic functions that operate across those different
+collections, and a set of conditions to support error processing and
+recovery.  This makes it easy to swap different collection
+implementations in your client code without changing the rest of your
+framework.
+
+For performance, however, the individual collection types are defined
+in a “one collection, one file” style.  You can generally pick any
+file defining a collection you need, and obtain the relevant
+algorithms without the overhead of generic functions and object
+dispatch.  Most people won't need this, but if you find yourself facing
+tight resource contraints, well, here you go.  Take what you need and
+leave the rest.
+
+See the [Manual][manual] for examples of both styles of usage.
+
+blah blah blah
+
+finish later
+
+
 
 - Common Generics: All collections are manipulated through the same
   set of CLOS generic functions.  We aren't maintaining compatibility
