@@ -27,11 +27,10 @@ Functionality
 
 #### Structures (Types)
 
-- Bags (aka Multisets): A simple un-ordered collection of values.  Duplicate
-  values are maintained.
+- Bags (aka Multisets): A simple un-ordered collection of values.
 
 - Ternary Search Trees: A really nice data structure somewhere between
-  hash tables and tries.  Both performance and speed is comparable to
+  hash tables and tries.  Performance and speed is comparable to
   hash tables, but they have unique properties much like indexed tries
   without the space overhead (e.g., you can store Unicode strings in
   them without wasting memory).  They are ideal for managing
@@ -40,40 +39,27 @@ Functionality
 
 - Red-Black Trees
 
+- Alternate hashing implementations, and the hash tables that go with
+  them.
+
 - more as I need them and study them; feel free to suggest something!
 
 #### API
 
-At the top level, the Accretions system provides a set of collection
-types, a set of generic functions that operate across those different
-collections, and a set of conditions to support error processing and
-recovery.  This makes it easy to swap different collection
-implementations in your client code without changing the rest of your
-framework.
+The Accretions system provides a set of collection types, a set of
+generic functions common to all those different collections, and a set
+of conditions to support error processing and recovery.  This makes it
+easy to swap different collection implementations in your client code
+without changing the rest of your framework.
 
-For performance, however, the individual collection types are defined
-in a “one collection, one file” style.  You can generally pick any
-file defining a collection you need, and obtain the relevant
-algorithms without the overhead of generic functions and object
-dispatch.  Most people won't need this, but if you find yourself facing
-tight resource contraints, well, here you go.  Take what you need and
-leave the rest.
+Each collection type in the Accretions system is also available as a
+single package in a single file that provides the collection and
+“regular” functions to work with it.  This is primarily meant for
+resource-constrained environments, avoiding the entire CLOS framework.
+With a glue package (described in the [manual][]), it is easy to
+access just one or two collection types without pulling in the entire
+Accretions system.
 
-See the [Manual][manual] for examples of both styles of usage.
-
-blah blah blah
-
-finish later
-
-
-
-- Common Generics: All collections are manipulated through the same
-  set of CLOS generic functions.  We aren't maintaining compatibility
-  with other lisp systems (as Common Lisp must), so we are free to
-  write common operations for the different operations.  Just one
-  interface serves many data structures.
-
-- something about inevitable package symbol name collisions
 
 
 ### What's Supported Currently
@@ -82,6 +68,7 @@ Eventually, I'll request getting this package added to [Quicklisp][],
 when I feel Accretions is good enough.
 
 [Quicklisp]: https://www.quicklisp.org/beta/ "The Quicklisp Project Homepage"
+
 
 
 ### What's Not Supported Currently

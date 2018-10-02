@@ -1,13 +1,13 @@
 ;;;; tests the bag implementation
-#-asdf3.1 (error "ACCRETIONS/BAG-TEST requires ASDF 3.1.2 or later")
+ #-asdf3.1 (error "ACCRETIONS/TEST/BAG requires ASDF 3.1.2 or later")
 
-(defpackage #:accretions/bag-test
+(defpackage #:accretions/test/bag
   (:use #:cl #:fiveam)
   (:export #:run! #:bag))
-(in-package #:accretions/bag-test)
+(in-package #:accretions/test/bag)
 
 (uiop:define-package #:bag		; glue
-    (:use-reexport #:accretions/bag))
+    (:use-reexport #:accretions/src/bag))
 
 (defparameter +many+ 1000000
   "How many long doubles to add to a bag when testing many additions.")
@@ -32,23 +32,17 @@
   "Tests bag size."
   (with-bag b
     (is (zerop (bag:size b)))
-    (bag:add b 42)
-    (is (= 1 (bag:size b)))
-    (bag:add b t)
-    (is (= 2 (bag:size b)))
-    (bag:add b nil)
-    (is (= 3 (bag:size b)))
-    (bag:add b "foobar")
-    (is (= 4 (bag:size b)))))
+    (is (= 1 (bag:size (bag:add b 42))))
+    (is (= 2 (bag:size (bag:add b t))))
+    (is (= 3 (bag:size (bag:add b nil))))
+    (is (= 4 (bag:size (bag:add b "foobar"))))))
 
 (test emptyp
   "Tests empty bag detection."
   (with-bag b
     (is (bag:emptyp b))
-    (bag:add b #\a)
-    (is (not (bag:emptyp b)))
-    (bag:add b nil)
-    (is (not (bag:emptyp b)))))
+    (is (not (bag:emptyp (bag:add b #\a))))
+    (is (not (bag:emptyp (bag:add b nil))))))
 
 (test add
   "Tests adding items to a bag."
