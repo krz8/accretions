@@ -1,5 +1,5 @@
 ;;;; tests the bag implementation
- #-asdf3.1 (error "ACCRETIONS/TEST/BAG requires ASDF 3.1.2 or later")
+#-asdf3.1 (error "ACCRETIONS/TEST/BAG requires ASDF 3.1.2 or later")
 
 (defpackage #:accretions/test/bag
   (:use #:cl #:fiveam)

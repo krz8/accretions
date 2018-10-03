@@ -6,13 +6,177 @@ Overview
 
 [Homepage][home] [Manual][manual]
 
-Accretions aims to supply data structures that aren't already present
-in the Common Lisp standard.  Additionally, it intends to be maybe a
-little faster, maybe a little more efficient, and maybe a little more
-consistent than other implementations out there.
+Accretions supplies collections (data structures) that aren't already
+present in the Common Lisp standard, along with algorithms to work on
+those collections.  It hopes to be a little faster, maybe a little
+more efficient, and maybe a little more consistent than other
+implementations out there.
 
 [home]:    https://krz8.github.io/accretions        "Accretions Homepage"
 [manual]:  https://krz8.github.io/accretions/manual "Accretions Manual"
+
+
+Accretions
+----------
+
+Bags
+----
+
+make | A function that returns a new empty bag object.
+emptyp | Returns a true value if the supplied bag contains no items.
+size | Returns the number of items contained in the supplied bag.
+add | Adds a new item to the supplied bag.
+
+
+
+Glue
+----
+
+Accretions is a package that is built out of many other smaller
+packages, typically in a one-file-per-package style.  However,
+sooner or later, a client (you!) runs into the situation where
+the package name itself is simply too unwieldly to work with easily.
+Consider the following example; the repeated use of the **accretions**
+explicit package name, in order to access symbols therein, is just
+a bit verbose.
+
+```lisp
+(let ((b (accretions:make-bag)))
+  (gather-stuff b)
+  (format t "found ~d items~%" (accretions:size b))
+  (unless (accretions:emptyp b)
+    (accretions:map b #'func)))
+```
+
+The first thing we might try would be to introduce a nickname for the
+package.  For example, if we listed **acr** as a nickname for the
+accretions package, the previous example becomes clearer.
+
+```lisp
+(let ((b (acr:make-bag)))
+  (gather-stuff b)
+  (format t "found ~d items~%" (acr:size b))
+  (unless (acr:emptyp b)
+    (acr:map b #'func)))
+```
+
+The trouble with nicknames is that it is impossible to predict
+the packages on which client code depends or implements.  It's
+entirely possible that there is already another **acr** package in
+some client that we will conflict with.  The shorter the nickname,
+the more likely this is to be a problem.
+
+You might then turn to importing symbols from Accretions directly
+into your project.  This works, and is often the clearest approach
+of all, since no explicit packages are named… right up until you work
+with a symbol that already exists in your project.  Or, perhaps, a
+symbol that already exists in **COMMON-LISP**. Even if we adopted
+a convention to never use any symbols that already exist in the
+Common Lisp standard (a dubious convention at best, since we then
+lose well-understood idioms such as **MAP** or resort to oddly spelled
+variations), that will only solve the latter problem.  The former
+problems, conflicts with client software, still lurk.
+
+The cleanest approach I've found is the use of “glue” packages.
+With a glue package, the *client* decides the name to use to reference
+the symbols in the target package; not the package itself.
+Only the author of the client software is in a position to know which
+packages are going to be used in a project, so it makes sense to pick
+a solution that puts control in the client author's hands.
+
+Using an altenate form of package definition that's supplied with
+UIOP, the glue that defines a new package **acr** that provides
+access to all the exported symbols in the **accretions* package
+looks like the following.
+
+```lisp
+#-asdf3.1 (error "FOO requires ASDF 3.1.2 or later")
+
+(define-package #:acr
+  (:use-reexport #:accretions))
+```
+
+With this approach, **acr** can be used as an explicit package name
+for any symbol in the **accretions** package.  No code is compiled
+in the **acr** package, it solely exists to bridge the gap between
+client code and the required package. Plus, it can be easily
+changed in the future, without changing nicknames or any other resources
+in the Accretions system.
+
+This really comes into its own if a client wants to use a single
+collection from the Accretions package without dragging in the rest of
+the library.  For example, imagine that there are resource constraints
+of some sort that lead you to use the **bag** collection from
+Accretions and nothing else.  The package in Accretions that defines
+the **bag** functionality is named **accretions/src/bag**.
+
+```lisp
+(let ((b (accretions/src/bag:make-bag)))
+  (gather-stuff b)
+  (format t "found ~d items~%" (accretions/src/bag:size b))
+  (unless (accretions/src/bag:emptyp b)
+    (accretions/src/bag:map b #'func)))
+```
+
+Yikes.
+
+But with just a little glue, this reduces to just the following.  In
+some respects, this is even clearer than the previous solution.
+
+```lisp
+(define-package #:bag
+  (:use-reexport #:accretions/src/bag))
+
+(let ((b (bag:make)))
+  (gather-stuff b)
+  (format t "found ~d items~%" (bag:size b))
+  (unless (bag:emptyp b)
+    (bag:map b #'func)))
+```
+
+All of this is not to say that nicknames shouldn't be used, or that
+importing symbols should be avoided, or anything else like that.
+Those tools have their place in system development, to be sure.
+Glue packages are just another approach to addressing the situation,
+one that fits Accretions (and its clients) particularly well.
+
+blah
+
+blah
+
+blah
+
+Examples
+--------
+
+### Working with Accretions
+
+### Working with a Single Container Implementation
+
+Accretions is structured in a way that makes it easy to adopt just a single
+container into your project without requiring the entire system.  This is
+intended for resource-constrained situations, where the full Accretions
+system might be too large for your purposes.  To work with it in that
+manner:
+
+First, select the container of interest.  For example, let's say you only
+need to work with **bags.**  In this case, the source file from Accretions
+that you need is **src/bags.lisp.**  Make that file a part of your project.
+
+When you peek inside, you'll find that the file defines a package named
+**accretions/src/bag**.  Obviously, no one in their right mind would expect
+you to type such a monter prefix every time.  It's also _not recommended_
+to simply import the package into your project; there are times when symbols
+in the package will shadow other symbols in your project, or perhaps even in
+the **COMMON-LISP** package.  Instead, a clean way to address this is to
+introduce a “glue” package.
+
+```lisp
+(uiop
+
+
+
+blah blah blah
 
 
 General Notes
