@@ -89,20 +89,20 @@ naming conflicts.
 ### Generic Functions
 
 <dl>
-  <dt> **emptyp** _container_ </dt>
+  <dt><b>emptyp</b> container</dt>
   <dd>Returns a true value if the supplied container is empty,
   otherwise returning NIL.</dd>
 
-  <dt> **make** _kind_ </dt>
+  <dt><b>make</b> kind</dt>
   <dd>Creates and returns a new container, according to the
   supplied keyword argument (one of **:bag**, **:rbtree**,
   **:tst**).</dd>
 
-  <dt> **map** _container_ _function_ </dt>
+  <dt><b>map</b> container function</dt>
   <dd>For every item present in the supplied container, the supplied
   function designator is invoked with that item as its argument.</dd>
 
-  <dt> **size** _container_ </dt>
+  <dt><b>size</b> container</dt>
   <dd>Returns the number of entries in the supplied container.</dd>
 </dl>
 
