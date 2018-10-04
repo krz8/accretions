@@ -64,7 +64,7 @@ naming conflicts.
    In the example below, we'll refer to the Accretions package with
    a glue package named **acr**.
 1. Define that new package glue.  _Define no code in that package!_
-   Instead, perform an import (allowing shadowing) of the Accretions package,
+   Instead, perform an import of the Accretions package,
    and re-export its symbols.  The **UIOP** package (included with
    **ASDF** 3.1.2 and later) has a **define-package** form that improves
    on **defpackage** with several convenience forms, making this trivial.
