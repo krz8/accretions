@@ -28,7 +28,7 @@ to work directly with each type, avoiding object dispatch overhead.
 Accretions comes with a fairly complete test kit to verify its
 functionality on your system.  If your build passes the tests,
 you should be able to rely on Accretions in your application.
-(**_Please_** [let me know][krz8] if you find a situation where this
+(**_Please_** [let me know][issues] if you find a situation where this
 isn't the case!)
 
 The ability to “store anything” is maintained across Accretions.
@@ -42,9 +42,9 @@ can be used for keys in both trees and tries.  Therefore, sane test
 functions must be supplied by the caller lest the comparisons become
 nonsensical.
 
-[home]:    https://krz8.github.io/accretions        "Accretions Homepage"
-[manual]:  https://krz8.github.io/accretions/manual "Accretions Manual"
-[krz8]:    https://github.com/krz8                  "krz8 homepage"
+[home]:    https://krz8.github.io/accretions          "Accretions Homepage"
+[manual]:  https://krz8.github.io/accretions/manual   "Accretions Manual"
+[issues]:  https://github.com/krz8/accretions/issues  "Accretions Issues"
 
 
 
