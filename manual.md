@@ -51,7 +51,7 @@ nonsensical.
 Accretions
 ----------
 
-=== Use ===
+### Use
 
 The author recommends the use of a “glue” package to add Accretions to
 your code.  Certainly, you are free to introduce Accretions to your
@@ -63,10 +63,10 @@ naming conflicts.
    client software.  This name should be short and must be unique.
    In the example below, we'll refer to the Accretions package with
    a glue package named **acr**.
-1. Define that new package glue.  **Define no code in that package!**
+1. Define that new package glue.  _Define no code in that package!_
    Instead, perform an import (allowing shadowing) of the Accretions package,
    and re-export its symbols.  The **UIOP** package (included with
-   **ASDF** 3.1.2 and later) has a **define-package* form that improves
+   **ASDF** 3.1.2 and later) has a **define-package** form that improves
    on **defpackage** with several convenience forms, making this trivial.
 1. Prefix all references to Accretions symbols in your code with the
    **acr** package.
@@ -86,29 +86,29 @@ naming conflicts.
 ```
 
 
-=== Generic Functions ===
+### Generic Functions
 
 <dl>
-  <dt>**emptyp** _container_</dt>
+  <dt> **emptyp** _container_ </dt>
   <dd>Returns a true value if the supplied container is empty,
   otherwise returning NIL.</dd>
 
-  <dt>**make** _kind_</dt>
+  <dt> **make** _kind_ </dt>
   <dd>Creates and returns a new container, according to the
   supplied keyword argument (one of **:bag**, **:rbtree**,
   **:tst**).</dd>
 
-  <dt>**map** _container_ _function_</dt>
+  <dt> **map** _container_ _function_ </dt>
   <dd>For every item present in the supplied container, the supplied
   function designator is invoked with that item as its argument.</dd>
 
-  <dt>**size** _container_</dt>
+  <dt> **size** _container_ </dt>
   <dd>Returns the number of entries in the supplied container.</dd>
 </dl>
 
 
 
-=== Conditions ===
+### Conditions
 
 
 
@@ -116,7 +116,7 @@ naming conflicts.
 Bags
 ----
 
-=== Use ===
+### Use
 
 Instead of using the full Accretions package (as seen above), you
 can use only the **bag** container, leaving the rest of Accretions
@@ -157,7 +157,7 @@ naming conflicts.
     (bag:map b #'fn)))
 ```
 
-=== Functions ===
+### Functions
 
 add | Adds a new item to the supplied **bag**.
 emptyp | Returns a true value if the supplied **bag** contains no items.
