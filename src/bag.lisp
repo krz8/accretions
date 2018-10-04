@@ -2,8 +2,9 @@
 
 (defpackage #:accretions/src/bag
   (:use #:cl)
-  (:export #:bag #:make #:add #:emptyp #:size))
-(in-package #:accretions/src/bag) 
+  (:shadow #:map)
+  (:export #:bag #:make #:add #:emptyp #:size #:map))
+(in-package #:accretions/src/bag)
 
 ;;; We'll use a simple cons list to represent our bag type.  This
 ;;; will imply an ordering to its contents, but that's not a big
@@ -43,3 +44,10 @@ operations could be chained on it."
   (setf (head bag) (cons item (head bag)))
   (incf (sz bag))
   bag)
+
+(defun map (bag func)
+  "For every item added to the BAG, call the supplied function
+designator with the item."
+  (do ((x (head bag) (cdr x)))
+      ((null x) t)
+    (funcall func (car x))))

@@ -72,3 +72,23 @@ if all additions are non-NIL."
       (is-true (add-a-bunch b j)))
     (is (= +many+ (bag:size b)))))
 
+(test map
+  "Tests mapping a function across a bag."
+  (with-bag b
+    (let ((expected 0))
+      (do ((i +chunk+ (1- i)))
+	  ((zerop i) t)
+	(let ((x (random 999)))
+	  (bag:add b x)
+	  (incf expected x)))
+      (let* ((actual 0)
+	     (f (lambda (x) (incf actual x))))
+	(bag:map b f)
+	(is (= expected actual)))))
+  (with-bag b
+    (is-true (bag:emptyp b))
+    (let* ((runs 0)
+	   (f (lambda (x) (declare (ignore x))
+		          (incf runs))))
+      (bag:map b f)      
+      (is (zerop runs)))))
