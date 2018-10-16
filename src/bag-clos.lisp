@@ -3,7 +3,6 @@
 
 (defpackage #:accretions/src/bag-clos
   (:use #:cl #:accretions/src/generics)
-  (:shadow #:map)
   (:export #:add #:emptyp #:size #:map))
 (in-package #:accretions/src/bag-clos)
 
@@ -19,5 +18,5 @@
   "Returns a true value if the supplied BAG contains no items; else, NIL."
   (accretions/src/bag:emptyp bag))
 
-(defmethod map ((bag accretions/src/bag:bag) fun)
-  (accretions/src/bag:map bag fun))
+(defmethod mapcoll ((bag accretions/src/bag:bag) fun)
+  (accretions/src/bag:mapcoll bag fun))

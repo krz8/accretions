@@ -2,8 +2,7 @@
 
 (defpackage :accretions/src/generics
   (:use :common-lisp)
-  (:shadow map)
-  (:export #:add #:size #:map #:make #:emptyp))
+  (:export #:add #:size #:mapcoll #:make #:emptyp))
 (in-package :accretions/src/generics)
 
 (defgeneric add (collection item)
@@ -13,7 +12,7 @@
   (:documentation "Returns the number of items currently held within
   the supplied COLLECTION."))
 
-(defgeneric map (collection function)
+(defgeneric mapcoll (collection function)
   (:documentation "For every item in the supplied COLLECTION, the
   supplied function designator is invoked with an item.  An empty
   collection results in no calls to FUNCTION.  Return values of

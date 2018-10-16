@@ -4,7 +4,6 @@
 (uiop:define-package #:accretions/src/all
   (:nicknames #:accretions)
   (:use :common-lisp)
-  (:shadow map)
   (:use-reexport #:accretions/src/bag
 		 #:accretions/src/generics
 		 #:accretions/src/bag-clos))
