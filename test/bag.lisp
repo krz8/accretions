@@ -3,7 +3,7 @@
 
 (defpackage #:accretions/test/bag
   (:use #:cl #:fiveam)
-  (:export #:run! #:bag))
+  (:export #:all #:make #:size #:emptyp #:add #:add-many))
 (in-package #:accretions/test/bag)
 
 (uiop:define-package #:bag		; glue
@@ -14,9 +14,9 @@
 (defparameter +chunk+ 100000
    "How many long doubles to add to a bag at a time.")
 
-(def-suite bag
+(def-suite all
     :description "All bag tests.")
-(in-suite bag)
+(in-suite all)
 
 (defmacro with-bag (x &body body)
   `(let ((,x (bag:make)))
@@ -56,12 +56,22 @@
     (is-true (bag:add b nil))
     (is (= 3 (bag:size b)))))
 
+#+silly
 (defun add-a-bunch (bag n)
   "Add N randomly chosen doubles to the supplied BAG, returning T only
 if all additions are non-NIL."
   (every #'identity
 	 (loop :for i :from 1 :to n
 	       :collecting (bag:add bag (random most-positive-double-float)))))
+
+(defun add-a-bunch (bag n)
+  "Add N randomly chosen dyoubles to the supplied BAG, returning T
+  only if all additions are non-NIL.  Any ADD returning a false value
+  causes an immediate NIL return from ADD-A-BUNCH."
+  (do ((i n (1- i)))
+      ((zerop i) t)
+    (unless (bag:add bag (random most-positive-double-float))
+      (return))))
 
 (test add-many
   "Tests adding +MANY+ items to a bag."
