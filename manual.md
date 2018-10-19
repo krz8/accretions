@@ -11,13 +11,13 @@ implementations out there.
 
 Accretions is organized a single package delivering a set of container
 types (e.g., bags, red/black trees, ternary search trees), and an
-orthogonal set of generic functions to manipulate them.  Rather
-than different functions to implement similar functionality across
-different types (e.g, MAPC versus MAPHASH), there is just one set
-of functions in Accretions that work on all the containers it provides.
-The heavy use of CLOS generics is meant to minimize the changes
-required in client code as collection types change or are compared with
-one another.
+orthogonal set of generic functions to manipulate them.  Rather than
+different functions to implement similar functionality across
+different types (e.g, MAP versus MAPC versus MAPHASH), there is just
+one set of functions in Accretions that work on all the containers it
+provides.  The use of CLOS generics minimizes the changes required in
+client code as collection types change or are compared with one
+another.
 
 Accretions _also_ supports the ability to take even just a single
 data collection to use separately in a resource constrained
@@ -88,21 +88,23 @@ naming conflicts.
 
 ### Generic Functions
 
+
+
 <dl>
-  <dt><b>emptyp</b> container</dt>
+  <dt><strong>emptyp</strong> container</dt>
   <dd>Returns a true value if the supplied container is empty,
   otherwise returning NIL.</dd>
 
-  <dt><b>make</b> kind</dt>
-  <dd>Creates and returns a new container, according to the
-  supplied keyword argument (one of **:bag**, **:rbtree**,
-  **:tst**).</dd>
+  <dt><strong>make</strong> kind</dt>
+  <dd>Creates and returns a new container, according to the supplied
+  keyword argument (one of <strong>:bag</strong>,
+  <strong>:rbtree</strong>, or <strong>:tst</strong>).</dd>
 
-  <dt><b>map</b> container function</dt>
+  <dt><strong>map</strong> container function</dt>
   <dd>For every item present in the supplied container, the supplied
   function designator is invoked with that item as its argument.</dd>
 
-  <dt><b>size</b> container</dt>
+  <dt><strong>size</strong> container</dt>
   <dd>Returns the number of entries in the supplied container.</dd>
 </dl>
 
