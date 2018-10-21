@@ -4,7 +4,7 @@
   (:use #:cl)
   (:export #:bag #:make #:copy #:bagp
 	   #:head #:size
-	   #:emptyp #:add #:mapcoll))
+	   #:emptyp #:add #:mapfun))
 (in-package #:accretions/src/bag)
 
 ;;; BAG is a package, as we're following a "one package one file"
@@ -13,12 +13,19 @@
 ;;; function names (for constructors and the like) a bit needlessly
 ;;; wordy.  Hence, the DEFSTRUCT options below.
 
-(defstruct (bag (:conc-name nil) (:constructor make) (:copier copy)
+(defstruct (bag (:conc-name nil) (:constructor make) (:copier nil)
 		(:predicate bagp))
   "An unordered collection of items.  Unlike queues and other
 collections, bags only accumulate values and do not support deletion."
   (head nil :type list)
   (size 0 :type unsigned-byte))
+
+(defun copy (bag)
+  "Creates and returns a shallow copy of the supplied BAG.  The
+returned bag shares no structure with BAG, but does share its
+contents."
+  (make :head (copy-list (head bag))
+	:size (size bag)))
 
 (defun emptyp (bag)
   "Return T if the supplied BAG contains zero items; else, return NIL."
@@ -40,9 +47,7 @@ three NIL values."
   (incf (size bag))
   bag)
 
-(defun mapcoll (bag function)
-  "For every value in the BAG, call the supplied function designator
+(defun mapfun (bag function)
+  "For every value in the BAG, call the supplied FUNCTION designator
 with that value as an argument.  Returns T."
-  (do ((x (head bag) (cdr x)))
-      ((null x) t)
-    (funcall function (car x))))
+  (mapc function (head bag)))

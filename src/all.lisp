@@ -4,7 +4,8 @@
 (uiop:define-package #:accretions/src/all
   (:nicknames #:accretions)
   (:use :common-lisp)
-  (:use-reexport #:accretions/src/bag
-		 #:accretions/src/generics
-		 #:accretions/src/bag-clos))
+  (:use-reexport #:accretions/src/generics
+		 #:accretions/src/bag-clos)
+  (:import-from #:accretions/src/bag #:bagp)
+  (:export #:bagp))
 (in-package #:accretions/src/all)

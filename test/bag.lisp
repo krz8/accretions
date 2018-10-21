@@ -3,7 +3,7 @@
 
 (defpackage #:accretions/test/bag
   (:use #:cl #:fiveam)
-  (:export #:all #:make #:size #:emptyp #:add #:add-many))
+  (:export #:bag #:make #:copy #:size #:emptyp #:add #:add-many))
 (in-package #:accretions/test/bag)
 
 (uiop:define-package #:bag		; glue
@@ -14,9 +14,9 @@
 (defparameter +chunk+ 100000
    "How many long doubles to add to a bag at a time.")
 
-(def-suite all
+(def-suite bag
     :description "All bag tests.")
-(in-suite all)
+(in-suite bag)
 
 (defmacro with-bag (x &body body)
   `(let ((,x (bag:make)))
@@ -24,9 +24,13 @@
 
 (test make
   "Tests bag creation."
-  (with-bag b
-    (is (not (null b)))
-    (is (typep b 'bag:bag))))
+  (with-bag b1
+  (is (not (null b1)))
+  (is (typep b1 'bag:bag))
+  (with-bag b2
+    (is (not (null b2)))
+    (is (typep b2 'bag:bag))
+    (is (not (equal b1 b2))))))
 
 (test size
   "Tests bag size."
@@ -47,25 +51,53 @@
 (test add
   "Tests adding items to a bag."
   (with-bag b
-    (is-true (bag:emptyp b))
-    (is-true (bag:add b nil))
-    (is-false (bag:emptyp b))
-    (is-true (bag:add b nil))
-    (is-false (bag:emptyp b))
+    (is (bag:emptyp b))
+    (is (bag:add b nil))
+    (is (not (bag:emptyp b)))
+    (is (bag:add b nil))
+    (is (not (bag:emptyp b)))
     (is (= 2 (bag:size b)))
-    (is-true (bag:add b nil))
+    (is (bag:add b nil))
     (is (= 3 (bag:size b)))))
 
-#+silly
-(defun add-a-bunch (bag n)
-  "Add N randomly chosen doubles to the supplied BAG, returning T only
-if all additions are non-NIL."
-  (every #'identity
-	 (loop :for i :from 1 :to n
-	       :collecting (bag:add bag (random most-positive-double-float)))))
+(test bagp
+  "Tests BAGP predicate."
+  (with-bag b
+    (is (not (bag:bagp nil)))
+    (is (not (bag:bagp t)))
+    (is (not (bag:bagp 42)))
+    (is (bag:bagp b))))
+
+(defun bag-to-sorted-list (bag)
+  "Return a sorted list of items whose elements are strings from BAG."
+  (let (list)
+    (bag:mapfun bag (lambda (x) (push x list)))
+    (sort list #'string<)))
+
+;; The copy test, to be thorough, uses special knowledge of the bag
+;; implementation.  Not sure if I'll do this for other types, but right
+;; now it keeps me honest.
+
+(test copy
+  "Tests shallow copy."
+  (with-bag b1
+    (dolist (x '("BC" "a" "" "def"))
+      (bag:add b1 x))
+    (is (equalp '("" "BC" "a" "def") (bag-to-sorted-list b1)))
+    (is (= 4 (bag:size b1)))
+    (let ((b2 (bag:copy b1)))
+      (is (equalp b1 b2))
+      (is (not (equal b1 b2)))
+      (setf (cadr (bag:head b2)) "z")
+      (is (equalp '("BC" "a" "def" "z") (bag-to-sorted-list b2)))
+      (bag:add b2 "hello, world")
+      (is (= 4 (bag:size b1)))
+      (is (= 5 (bag:size b2)))
+      (setf (caddr (bag:head b2)) "")
+      (is (equal (bag:head b1) (cdr (bag:head b2)))))))
 
 (defun add-a-bunch (bag n)
-  "Add N randomly chosen dyoubles to the supplied BAG, returning T
+  "Add N randomly chosen doubles to the supplied BAG, returning T
   only if all additions are non-NIL.  Any ADD returning a false value
   causes an immediate NIL return from ADD-A-BUNCH."
   (do ((i n (1- i)))
@@ -79,10 +111,10 @@ if all additions are non-NIL."
     (do* ((i +many+ (- i j))
 	  (j +chunk+ (min +chunk+ i)))
 	 ((<= i 0) t)
-      (is-true (add-a-bunch b j)))
+      (is (add-a-bunch b j)))
     (is (= +many+ (bag:size b)))))
 
-(test map
+(test mapfun
   "Tests mapping a function across a bag."
   (with-bag b
     (let ((expected 0))
@@ -93,12 +125,12 @@ if all additions are non-NIL."
 	  (incf expected x)))
       (let* ((actual 0)
 	     (f (lambda (x) (incf actual x))))
-	(bag:map b f)
+	(bag:mapfun b f)
 	(is (= expected actual)))))
   (with-bag b
     (is-true (bag:emptyp b))
     (let* ((runs 0)
 	   (f (lambda (x) (declare (ignore x))
 		          (incf runs))))
-      (bag:map b f)      
+      (bag:mapfun b f)      
       (is (zerop runs)))))

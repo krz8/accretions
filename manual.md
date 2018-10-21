@@ -60,7 +60,7 @@ nonsensical.
 Accretions
 ----------
 
-### Use
+### Getting Accretions Into Your Project
 
 The author recommends the use of a “glue” package to add Accretions to
 your code.  Certainly, you are free to introduce Accretions to your
@@ -96,23 +96,81 @@ naming conflicts.
 ```
 
 
-### Generic Functions
+### Functions
 
-#### <strong>make</strong> type &key deepcopy shallowcopy
+#### <strong>make</strong> type
 
 **make** creates and returns a new collection, according to the **type**
 argument, which must be one of the following keywords:
 
-**:bag** | Creates and returns a BAG object
+**:bag** | Creates and returns a Bag object
 **:tst** | Creates and returns a Ternary Search Tree object
 **:rbt** | Creates and returns a Red-Black Tree object
 
-Normally, a new empty collection is created and returned.  However,
-the use of the :DEEPCOPY and :SHALLOWCOPY keywords will copy the
-contents of an existing collection of a similar type.
 
-**:deepcopy** | The new collection contains values that are typically EQUAL or EQUALP to the copied object, but no structure or contents are shared between the two collections
-**:shallowcopy** | The contents and structure of the other object is shared with the newly created object
+#### <strong>copy</strong> collection
+
+Given an Accretions collection, this function returns a new
+_shallow copy_ of that collection.  By shallow, it is meant
+that the collection itself is new, but any keys or values
+stored within it are shared between the source and returned
+collections.
+
+Because Accretions is designed to work with the widest range of keys
+and values, it is impossible to implement a general “deep copy” (aka
+clone) function; writing such requires _a priori_ knowledge of the
+items stored within the collection.  However, for any given
+application, it should be easy to construct a clone function that
+suits your use of Accretions in your project.
+
+
+#### <strong>add</strong> collection value
+
+**_Need to work out key/value pair arguments**
+
+
+#### <strong>mapfun</strong> collection function
+
+Corresponds to standard CL functions such as MAPC and MAP.
+For every item in the supplied COLLECTION, the supplied
+FUNCTION designator is called once with that item as its sole
+argument.  Return values are not considered.  If you need to
+exit early before the entire collection is processed, use a local
+BLOCK and RETURN.  For example,
+
+```lisp
+(defun containsp (collection thing)
+  (block nil
+    (mapfun collection (lambda (x) (when (eql thing x)
+                                     (return t))))
+    nil))
+```
+
+What will key/value pairs look like?
+
+
+#### <strong>size</strong> collection
+
+Returns an unsigned byte indicating the number of items in the supplied
+COLLECTION.  In this context, an “item” corresponds to a previous call
+to the **add** function.  Hence, for a Bag this might be a single value,
+while for a tree it might be a key/value pair.
+
+
+#### <strong>emptyp</strong> collection
+
+Returns true when the supplied collection contains no values of any kind.
+
+
+
+#### <strong>bagp</strong> value
+
+Returns a true value when the supplied VALUE is an Accretions Bag.
+
+
+
+Blah Blah Blah
+--------------
 
 blah blah blah
 
