@@ -96,11 +96,30 @@ naming conflicts.
 ```
 
 
+### Collection Types
+
+The collections supplied by Accretions fall into one of two classes.
+
+**value-collection**
+Some collections are simply made up of single values, typically added
+one at a time through ADD or some other mechanism.  For example,
+a Bag or a Stack are simple value-collections.
+
+**kv-collection**
+Other collections are made up of item pairs, a key and its value.
+Dictionaries and hash tables are examples of kv-collections.
+
+In the descriptions below, you'll see one or the other of these when
+a distinction in functionality has to be made.  Other times, you'll
+simply see **collection**, indicating that the function works identically
+for both kinds of collections.
+
+
 ### Functions
 
 #### <strong>make</strong> type
 
-**make** creates and returns a new collection, according to the **type**
+Creates and returns a new collection, according to the **type**
 argument, which must be one of the following keywords:
 
 **:bag** | Creates and returns a Bag object
@@ -124,12 +143,18 @@ application, it should be easy to construct a clone function that
 suits your use of Accretions in your project.
 
 
-#### <strong>add</strong> collection value
+#### <strong>add</strong> value-collection value
 
-**_Need to work out key/value pair arguments**
+Add the supplied VALUE to the supplied COLLECTION.
 
 
-#### <strong>mapfun</strong> collection function
+#### <strong>add</strong> kv-collection key value
+
+Associates the supplied KEY with a supplied VALUE in the supplied
+COLLECTION.
+
+
+#### <strong>mapfun</strong> value-collection function
 
 Corresponds to standard CL functions such as MAPC and MAP.
 For every item in the supplied COLLECTION, the supplied
@@ -146,7 +171,13 @@ BLOCK and RETURN.  For example,
     nil))
 ```
 
-What will key/value pairs look like?
+
+### <strong>mapfun</strong> kv-collection function
+
+The key-value variant of MAPFUN.  Here, the supplied FUNCTION is
+called with two arguments for every entry in the supplied COLLECTION.
+The first argument is a key, and the second argument is the
+value associated with that key, as they appear in the COLLECTION.
 
 
 #### <strong>size</strong> collection
@@ -159,13 +190,14 @@ while for a tree it might be a key/value pair.
 
 #### <strong>emptyp</strong> collection
 
-Returns true when the supplied collection contains no values of any kind.
+Returns true when the supplied collection contains no items of any kind.
 
 
 
 #### <strong>bagp</strong> value
 
-Returns a true value when the supplied VALUE is an Accretions Bag.
+Returns a true value when the supplied VALUE is an Accretions Bag;
+otherwise, returns NIL in all other cases.
 
 
 
