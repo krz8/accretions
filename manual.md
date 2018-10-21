@@ -4,26 +4,35 @@ Accretions Manual
 [Homepage][home] [Manual][manual]
 
 Accretions supplies collections (data structures) that aren't already
-present in the Common Lisp standard, along with algorithms to work on
-those collections.  It hopes to be a little faster, maybe a little
+present in the Common Lisp standard, along with algorithms to operate
+on those collections.  It hopes to be a little faster, maybe a little
 more efficient, and maybe a little more consistent than other
 implementations out there.
 
-Accretions is organized a single package delivering a set of container
-types (e.g., bags, red/black trees, ternary search trees), and an
-orthogonal set of generic functions to manipulate them.  Rather than
-different functions to implement similar functionality across
+Accretions is typically used as a single package delivering a set of
+container types (e.g., bags, red/black trees, ternary search trees),
+and an orthogonal set of generic functions to manipulate them.  Rather
+than different functions to implement similar functionality across
 different types (e.g, MAP versus MAPC versus MAPHASH), there is just
 one set of functions in Accretions that work on all the containers it
 provides.  The use of CLOS generics minimizes the changes required in
 client code as collection types change or are compared with one
 another.
 
-Accretions _also_ supports the ability to take even just a single
-data collection to use separately in a resource constrained
-environment, without dragging in all of the CLOS functionality.
-In this context, “regular” (non-generic) functions are provided
-to work directly with each type, avoiding object dispatch overhead.
+Accretions _also_ supports the ability to take even just a single data
+collection to use separately in a resource constrained environment,
+without dragging in all of the CLOS functionality (using structures*
+instead of classes, regular functions instead of dispatched generics,
+and so on).  In this context, each type is provided as a package whose
+functions and other symbols can be accessed from your client code
+directly.
+
+> * Yup, many Common Lisp systems today implement structures on top of
+> CLOS, or vice versa.  It used to be the case that structures, and
+> their associated slot-access functions, were faster than CLOS and
+> its generics.  I can't speak authoritatively about all the different
+> Lisp systems out there, but I do believe the approach taken here
+> _can_ be faster in some environments, but _should not_ be slower.
 
 Accretions comes with a fairly complete test kit to verify its
 functionality on your system.  If your build passes the tests,
@@ -56,20 +65,21 @@ Accretions
 The author recommends the use of a “glue” package to add Accretions to
 your code.  Certainly, you are free to introduce Accretions to your
 application through other methods (package nicknames, package
-imports); this approach is recommended here as it avoids annoying
+imports), but the glue approach is recommended as it avoids annoying
 naming conflicts.
 
-1. Choose a name for the Accretions package that you'll use in your
-   client software.  This name should be short and must be unique.
-   In the example below, we'll refer to the Accretions package with
-   a glue package named **acr**.
+1. Choose a name with which to refer to Accretions in your client
+   software.  This name should be short and must be unique.  In the
+   example below, we'll refer to the Accretions package with a glue
+   package named **acr**.
 1. Define that new package glue.  _Define no code in that package!_
-   Instead, perform an import of the Accretions package,
-   and re-export its symbols.  The **UIOP** package (included with
-   **ASDF** 3.1.2 and later) has a **define-package** form that improves
-   on **defpackage** with several convenience forms, making this trivial.
+   Instead, perform an import of the Accretions package, and re-export
+   its symbols.  The **UIOP** package (included with **ASDF** 3.1.2
+   and later) has a **define-package** form that improves on
+   **defpackage** with several convenience forms, making this trivial
+   below.
 1. Prefix all references to Accretions symbols in your code with the
-   **acr** package.
+   new **acr** package.
 
 ```lisp
 #-asdf3.1 (error "FOO requires ASDF 3.1.2 or later")
@@ -78,17 +88,33 @@ naming conflicts.
   (:use-reexport #:accretions))        ; really need in your application
 
 ;;; using that package definition
-(let ((b (acr:make :bag)))
-  (gather-stuff b)
-  (format t "found ~d items~%" (acr:size b))
-  (unless (acr:emptyp b)
-    (acr:map b #'fn)))
+(let ((things (acr:make :bag)))
+  (gather-stuff things)
+  (format t "found ~d items~%" (acr:size things))
+  (unless (acr:emptyp things)
+    (acr:map things #'fn)))
 ```
 
 
 ### Generic Functions
 
+#### <strong>make</strong> type &key deepcopy shallowcopy
 
+**make** creates and returns a new collection, according to the **type**
+argument, which must be one of the following keywords:
+
+**:bag** | Creates and returns a BAG object
+**:tst** | Creates and returns a Ternary Search Tree object
+**:rbt** | Creates and returns a Red-Black Tree object
+
+Normally, a new empty collection is created and returned.  However,
+the use of the :DEEPCOPY and :SHALLOWCOPY keywords will copy the
+contents of an existing collection of a similar type.
+
+**:deepcopy** | The new collection contains values that are typically EQUAL or EQUALP to the copied object, but no structure or contents are shared between the two collections
+**:shallowcopy** | The contents and structure of the other object is shared with the newly created object
+
+blah blah blah
 
 <dl>
   <dt><strong>emptyp</strong> container</dt>

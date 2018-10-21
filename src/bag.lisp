@@ -2,52 +2,47 @@
 
 (defpackage #:accretions/src/bag
   (:use #:cl)
-  (:shadow #:map)
-  (:export #:bag #:make #:add #:emptyp #:size #:map))
+  (:export #:bag #:make #:copy #:bagp
+	   #:head #:size
+	   #:emptyp #:add #:mapcoll))
 (in-package #:accretions/src/bag)
 
-;;; We'll use a simple cons list to represent our bag type.  This
-;;; will imply an ordering to its contents, but that's not a big
-;;; deal; no one should rely on any ordering in a bag.
+;;; BAG is a package, as we're following a "one package one file"
+;;; coding style, as well as a symbol (the structure) within that
+;;; package.  This renders the standard automagically-generated
+;;; function names (for constructors and the like) a bit needlessly
+;;; wordy.  Hence, the DEFSTRUCT options below.
 
-(defclass bag ()
-  ((head :initarg :head :accessor head
-	 :documentation "Points to the head of the list of items in the bag.")
-   (sz :initarg :sz :accessor sz :type (integer 0 *) :reader size
-       :documentation "Tracks the number of items in the bag.  Use
-       SIZE to obtain the current size of the BAG."))
-  (:default-initargs :head nil :sz 0)
-  (:documentation "An unordered collection of items.  Unlike queues
-  and other collections, individual items in a bag cannot be deleted
-  \(the bag itself can be deleted, of course, which removes the
-  references to all items within it\)."))
-
-(defun make ()
-  "Create and return a new empty bag object."
-  (make-instance 'bag))
+(defstruct (bag (:conc-name nil) (:constructor make) (:copier copy)
+		(:predicate bagp))
+  "An unordered collection of items.  Unlike queues and other
+collections, bags only accumulate values and do not support deletion."
+  (head nil :type list)
+  (size 0 :type unsigned-byte))
 
 (defun emptyp (bag)
   "Return T if the supplied BAG contains zero items; else, return NIL."
   (null (head bag)))
 
-;;; We used to test that the CONS succeeded before modifying the list
-;;; and returning true; the idea was that CONS is really the only
-;;; thing that could fail in ADD.  In practice, though, any situation
-;;; that leads to a CONS failure will raise an error condition of some
-;;; kind.  For that reason, ADD doesn't actually test anything; it
-;;; assumes that if an error is not raised, the operation is
-;;; successful.
+;;; We used to test that the CONS succeeded before modifying the list;
+;;; the idea was that CONS is really the only thing that could fail in
+;;; ADD.  In practice, though, any situation that leads to a CONS
+;;; failure should raise an error condition of some kind.  In other
+;;; words, CONS doesn't have a failure return.  For that reason, ADD
+;;; no longer tests anything, on the assumption that if an error is
+;;; not raised, the operation is successful.
 
-(defun add (bag item)
-  "Add ITEM to the supplied BAG, returning that BAG so that more
-operations could be chained on it."
-  (setf (head bag) (cons item (head bag)))
-  (incf (sz bag))
+(defun add (bag value)
+  "Add the supplied VALUE to the BAG, returning that BAG.  Duplicate
+VALUE are supported; calling (ADD NIL) three times yields a BAG with
+three NIL values."
+  (setf (head bag) (cons value (head bag)))
+  (incf (size bag))
   bag)
 
-(defun map (bag func)
-  "For every item added to the BAG, call the supplied function
-designator with the item."
+(defun mapcoll (bag function)
+  "For every value in the BAG, call the supplied function designator
+with that value as an argument.  Returns T."
   (do ((x (head bag) (cdr x)))
       ((null x) t)
-    (funcall func (car x))))
+    (funcall function (car x))))
