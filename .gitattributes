@@ -1,3 +1,10 @@
+* text=auto
+
+*.md text
+*.yml text
+*.jpg binary
+*.png binary
+
 # I hate having to do this, but some lisps (e.g., SBCL) expect Unix
 # line endings even in a Windows environment.  Others (e.g., CCL)
 # don't seem to have this problem, or at least they cover it up well
@@ -7,8 +14,5 @@
 # ensure Unix line endings everywhere.  This will probably cause
 # problems for someone developing under Windows with a native IDE.
 
-* text=auto
-*.md text
-*.yml text
-*.lisp eol=lf
-*.asd eol=lf
+*.lisp text eol=lf
+*.asd text eol=lf
