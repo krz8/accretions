@@ -1,11 +1,11 @@
 ;;;; a bag is an unordered collection of items
 
-(defpackage #:accretions/src/bag
+(defpackage :accretions/src/bag
   (:use #:cl)
   (:export #:bag #:make #:copy #:bagp
 	   #:head #:size
 	   #:emptyp #:add #:mapfun))
-(in-package #:accretions/src/bag)
+(in-package :accretions/src/bag)
 
 ;;; BAG is a package, as we're following a "one package one file"
 ;;; coding style, as well as a symbol (the structure) within that

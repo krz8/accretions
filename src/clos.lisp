@@ -1,10 +1,13 @@
-;;;; CLOS methods for operating on bags
-#-asdf3.1 (error "ACCRETIONS/SRC/BAG-CLOS requires ASDF 3.1.2 or later")
+;;;; CLOS methods, mostly just dispatchers for other functionality
+#-asdf3.1 (error "ACCRETIONS/SRC/CLOS requires ASDF 3.1.2 or later")
 
-(defpackage #:accretions/src/bag-clos
+(defpackage :accretions/src/clos
   (:use #:cl #:accretions/src/generics)
   (:export #:make #:copy #:add #:emptyp #:size #:mapfun))
-(in-package #:accretions/src/bag-clos)
+(in-package :accretions/src/clos)
+
+;;; Assumes that the other src packages are already loaded (via the
+;;; asd).
 
 (defmethod make ((kind (eql :bag)))
   "Creates a new empty BAG and returns it."

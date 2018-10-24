@@ -1,11 +1,11 @@
 ;;;; the actual accretions package
-#-asdf3.1 (error "ACCRETIONS requires ASDF 3.1")
+#-asdf3.1 (error "ACCRETIONS/SRC/ALL requires ASDF 3.1.2")
 
-(uiop:define-package #:accretions/src/all
-  (:nicknames #:accretions)
+(uiop:define-package :accretions/src/all
+  (:nicknames :accretions)
   (:use :common-lisp)
-  (:use-reexport #:accretions/src/generics
-		 #:accretions/src/bag-clos)
-  (:import-from #:accretions/src/bag #:bagp)
+  (:use-reexport :accretions/src/generics
+		 :accretions/src/clos)
+  (:import-from :accretions/src/bag #:bagp)
   (:export #:bagp))
-(in-package #:accretions/src/all)
+(in-package :accretions/src/all)
