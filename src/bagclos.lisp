@@ -1,5 +1,5 @@
 ;;;; CLOS methods, mostly just dispatchers for other functionality
-#-asdf3.1 (error "ACCRETIONS/SRC/CLOS requires ASDF 3.1.2 or later")
+#-asdf3.1 (error "ACCRETIONS/SRC/BAGCLOS requires ASDF 3.1.2 or later")
 
 ;; (eval-when (:compile-toplevel)
 ;;   (print "compiling clos"))
@@ -8,10 +8,10 @@
 ;; (eval-when (:execute)
 ;;   (print "executing clos"))
 
-(defpackage :accretions/src/clos
+(defpackage :accretions/src/bagclos
   (:use #:cl #:accretions/src/generics)
   (:export #:make #:copy #:add #:emptyp #:size #:mapfun))
-(in-package :accretions/src/clos)
+(in-package :accretions/src/bagclos)
 
 ;;; Assumes that the other src packages are already loaded (via the
 ;;; asd).
@@ -26,8 +26,8 @@ bag shares values with the source bag, but has its own structure and
 can be further modified."
   (accretions/src/bag:copy bag))
 
-(defmethod add ((bag accretions/src/bag:bag) item)
-  "Adds the supplied ITEM to the BAG."
+(defmethod add ((bag accretions/src/bag:bag) value)
+  "Adds the supplied VALUE to the BAG."
   (accretions/src/bag:add bag item))
 
 (defmethod size ((bag accretions/src/bag:bag))

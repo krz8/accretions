@@ -12,7 +12,7 @@
   (:nicknames :accretions)
   (:use :common-lisp)
   (:use-reexport :accretions/src/generics
-		 :accretions/src/clos)
+		 :accretions/src/bagclos)
   (:import-from :accretions/src/bag #:bagp)
   (:export #:bagp))
 (in-package :accretions/src/all)
