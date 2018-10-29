@@ -1,5 +1,12 @@
 ;;;; generics offered throughout Accretions
 
+;; (eval-when (:compile-toplevel)
+;;   (print "compiling generics"))
+;; (eval-when (:load-toplevel)
+;;   (print "loading generics"))
+;; (eval-when (:execute)
+;;   (print "executing generics"))
+
 (defpackage :accretions/src/generics
   (:use :common-lisp)
   (:export #:make #:copy #:add #:size #:mapfun #:emptyp))

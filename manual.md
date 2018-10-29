@@ -17,22 +17,20 @@ different types (e.g, MAP versus MAPC versus MAPHASH), there is just
 one set of functions in Accretions that work on all the containers it
 provides.  The use of CLOS generics minimizes the changes required in
 client code as collection types change or are compared with one
-another.
+another.  Conditions are adopted as the general error reporting
+facility, rather than return codes.
 
-Accretions _also_ supports the ability to take even just a single data
-collection to use separately in a resource constrained environment,
-without dragging in all of the CLOS functionality (using structures*
-instead of classes, regular functions instead of dispatched generics,
-and so on).  In this context, each type is provided as a package whose
+Accretions _also_ supports using any data collection type directly in
+a resource constrained environment, without dragging in all of the
+CLOS functionality (e.g., using structures instead of classes, regular
+functions instead of dispatched generics, eschewing conditions, and so
+on).  In this context, each type is provided as a package whose
 functions and other symbols can be accessed from your client code
-directly.
-
-> * Yup, many Common Lisp systems today implement structures on top of
-> CLOS, or vice versa.  It used to be the case that structures, and
-> their associated slot-access functions, were faster than CLOS and
-> its generics.  I can't speak authoritatively about all the different
-> Lisp systems out there, but I do believe the approach taken here
-> _can_ be faster in some environments, but _should not_ be slower.
+directly.  If you look closely, you'll find that the low-level
+packages, such as src/bag.lisp, are effectively standalone and can be
+accessed without any other dependencies.  Most people won't need this
+and for them, the CLOS functionality in Accretions will be fine; but
+for those of you chasing CPU cycles and memory, this should help.
 
 Accretions comes with a fairly complete test kit to verify its
 functionality on your system.  If your build passes the tests,

@@ -1,6 +1,13 @@
 ;;;; CLOS methods, mostly just dispatchers for other functionality
 #-asdf3.1 (error "ACCRETIONS/SRC/CLOS requires ASDF 3.1.2 or later")
 
+;; (eval-when (:compile-toplevel)
+;;   (print "compiling clos"))
+;; (eval-when (:load-toplevel)
+;;   (print "loading clos"))
+;; (eval-when (:execute)
+;;   (print "executing clos"))
+
 (defpackage :accretions/src/clos
   (:use #:cl #:accretions/src/generics)
   (:export #:make #:copy #:add #:emptyp #:size #:mapfun))
