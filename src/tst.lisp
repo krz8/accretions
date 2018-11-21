@@ -58,6 +58,27 @@ space-efficient manner."
   (test= #'char= :type function)
   (size 0 :type unsigned-byte))
 
+(defmacro defun-tst (name &rest args &body body)
+  "Much like a regular DEFUN, taking most of the same forms, this
+macro ensures the resulting function accepts :IGNORE-CASE, :TEST=,
+and :TEST< keys, and it also wraps the body inside a LET that binds
+TEST< and TEST= variables to the appropriate functions."
+  (let ((new-arg-list)
+	(state 'before))
+    ;; Our goal is to build up a new-arg-list, either adding our
+    ;; required keywords to an existing keyword list, or splicing a
+    ;; &KEY clause into the supplied keyword list.  See the definition
+    ;; of Ordinary Lambda Lists in CL for details on where the &KEY
+    ;; must appear, it'll make the "before" and "after" states
+    ;; clearer.
+    (mapc (lambda (a)
+	    (case state
+	      ('before (cond
+		   (push a new-arg-list)))))
+	  args)
+    `(defun ,name ,(nreverse new-arg-list)
+       ,@body)))
+
 (defun make (&key ignore-case test= test<)
   "Returns a new (empty) ternary search tree.  By default, the TST is
 set up to process its keys as strings in a case-sensitive manner, but
