@@ -51,8 +51,7 @@
 (defstruct node
   split lokid eqkid hikid termp value)
 
-(defstruct (tst (:include node) (:conc-name nil) (:constructor nil)
-		(:copier nil) (:predicate tstp))
+(defstruct (tst (:include node) (:predicate tstp) (:conc-name nil))
   "A Ternary Search Tree, providing trie-like functionality in a
 space-efficient manner."
   (test< #'char< :type function)
@@ -80,3 +79,14 @@ this can be modified by using the following keywords.
   CHAR<.  This option overrides the behavior of :IGNORE-CASE."
   (make-tst :test< (or test< (and ignore-case #'char-lessp) #'char<)
 	    :test= (or test= (and ignore-case #'char-equal) #'char=)))
+
+(defun emptyp (tst)
+  "Return T if the supplied ternary search tree contains zero items; else, return NIL."
+  (zerop (tst-size tst)))
+
+(defun copy (tst)
+  "Create and return a new Ternary Search Tree which shares the key
+elements and values of the source TST, but has its own distinct
+structure.  Modifications to the returned tree are independent of the
+source tree, but stored values may be shared betwen the two."
+  nil)

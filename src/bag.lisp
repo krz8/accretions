@@ -28,9 +28,9 @@ collections, bags only accumulate values and do not support deletion."
   (size 0 :type unsigned-byte))
 
 (defun copy (bag)
-  "Creates and returns a shallow copy of the supplied BAG.  The
-returned bag shares no structure with BAG, but does share its
-contents."
+  "Creates and returns a shallow copy of the supplied BAG.  New values
+may be added to the returned BAG without affecting the source BAG, but
+existing values are shared between the two."
   (make :head (copy-list (head bag))
 	:size (size bag)))
 
