@@ -68,38 +68,50 @@ to the appropriate functions."
   ;; &KEY clause into the supplied keyword list.  See the definition
   ;; of Ordinary Lambda Lists in CL for details on where the &KEY
   ;; must appear, it'll make the states clearer.
-  (let* ((state 'vars)
-	 (keyp nil)
-	 (new-arg-list
-	  (mapcan (lambda (a)
-		    (case state
-		      (auxs (list a))
-		      (keys (when (eq a '&aux)
-			      (setf state 'auxs))
-			    (list a))
-		      (rest (case a
-			      (&key (setf state 'keys
-					  keyp t))
-			      (&aux (setf state 'auxs)))
-			    (list a))
-		      (opts (case a
-			      (&rest (setf state 'rest)
-				     (list a))
-			      (&key (setf state 'keys
-					  keyp t)
-				    '(&key :ignore-case :test= :test<))
-			      (&aux (setf state 'auxs)
-				    (list a))))
-		      (vars (case a
-			      (&optional (setf state 'opts)
-					 (list a))
-			      (&rest (setf state 'rest)
-				     (list a))
-			      (&key (setf state 'keys)
-				    '(&key :ignore-case :test= :test<))
-			      (&aux (setf state 'auxs)
-				    (list a))))))
-		  args)))
+  (let* ((state 'var) keyp new-arg-list)
+    (labels ((enter-aux-state ()
+	       (let ((old-keyp keyp))
+		 (setf state 'aux
+		       keyp t)
+		 (if old-keyp
+		     '(&aux)
+		     '(&key :ignore-case :test= :test< &aux))))
+	     (enter-key-state ()
+	       (setf state 'key
+		     keyp t)
+	       '(&key :ignore-case :test= :test<))
+	     (enter-rest-state ()
+	       (setf state 'rest)
+	       '(&rest))
+	     (enter-opt-state ()
+	       (setf state 'opt)
+	       '(&optional))
+	     (parse (a)
+	       (case state
+		  (aux (list a))
+		  (key (if (eq a '&aux)
+			   (enter-aux-state)
+			   (list a)))
+		  (rest (case a
+			  (&key (enter-key-state))
+			  (&aux (enter-aux-state))
+			  (t (list a))))
+		  (opt (case a
+			 (&rest (enter-rest-state))
+			 (&key (enter-key-state))
+			 (&aux (enter-aux-state))
+			 (t (list a))))
+		  (var (case a
+			 (&optional (enter-opt-state))
+			 (&rest (enter-rest-state))
+			 (&key (enter-key-state))
+			 (&aux (enter-aux-state))
+			 (t (list a)))))))
+      (setf new-arg-list (mapcan #'parse args)))
+    (unless keyp
+      (print 'appending)
+      (setf new-arg-list (append new-arg-list
+				'(&key :ignore-case :test= :test<))))
     `(defun ,name ,new-arg-list
        ,@body)))
 
