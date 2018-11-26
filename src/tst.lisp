@@ -58,6 +58,12 @@ space-efficient manner."
   (test= #'char= :type function)
   (size 0 :type unsigned-byte))
 
+(defun defun-tst-arg-fixer (&rest args)
+  (let (keyp new-args)
+    (tagbody
+     PLAIN-ARGS
+       )))
+
 (defmacro defun-tst (name (&rest args) &body body)
   "Much like a regular DEFUN, taking most of the same forms, this
 macro adds :IGNORE-CASE, :TEST=, and :TEST< keyword arguments, and it
@@ -68,7 +74,13 @@ to the appropriate functions."
   ;; &KEY clause into the supplied keyword list.  See the definition
   ;; of Ordinary Lambda Lists in CL for details on where the &KEY
   ;; must appear, it'll make the states clearer.
-  (let* ((state 'var) keyp new-arg-list)
+  (let* (state keyp new-arg-list)
+    (tagbody
+     START
+       (setf state 'var)
+     VAR
+       (case ))
+    
     (labels ((enter-aux-state ()
 	       (let ((old-keyp keyp))
 		 (setf state 'aux
