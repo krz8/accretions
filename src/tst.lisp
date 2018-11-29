@@ -24,8 +24,8 @@
 ;;; [refimpl]:  http://www.cs.princeton.edu/~rs/strings/
 ;;;             "Reference Implementation"
 ;;; 
-;;; This implementation, therefore, deviates from theirs slightly in
-;;; the following ways:
+;;; This implementation, therefore, deviates from theirs a little bit
+;;; in the following ways:
 ;;;
 ;;; - Each string can be made up of any character supported by the
 ;;;   underlying system.  This includes Unicode characters (on systems
@@ -35,10 +35,17 @@
 ;;;   components much larger than 7 bit ASCII or 8 bit ISO 8859.
 ;;;
 ;;; - Not only strings, but actually any sequence of elements may be
-;;;   stored in the tree.
+;;;   stored in the tree.  TEST= and TEST< functions need to be
+;;;   supplied accordingly.
 ;;;
 ;;; - The root of a ternary search tree caches information used
-;;;   throughout the tree, such as key comparison functions.  We
+;;;   throughout the tree, such as key comparison functions.
+;;;
+;;; - Every node is associated with one element of a key sequence.
+;;;   When EQKID is not NIL, it contains the base of a tree of keys
+;;;   that start with all the elements leading up to this node.
+
+We
 ;;;   also use the presence of a node to indicate that a given key
 ;;;   element actually exists, rather than overloading the meaning
 ;;;   of NULL, as in the C implementation.
@@ -48,25 +55,41 @@
 ;;;   the trie.  In this way, on the path "ate", you can indicate that
 ;;;   "a" is a separate word in the tree (or not).
 
+(defparameter +test=+ #'char=
+  "Default function to use when comparing elements of a key sequence
+for equality.")
+
+(defparameter +test<+ #'char<
+  "Default function to use when comparing elements of a key sequence
+for less-than.")
+
 (defstruct node
-  split lokid eqkid hikid termp value)
+  "Represents every node in a ternary search tree, including the root.
+SPLIT is the element this node represents, EQKID is for further keys
+continuing from this element, while LOKID and HIKID are the child
+trees relating to elements lower or higher than SPLIT.  TERMP
+indicates when this null is the terminating element of a key, and
+VALUE is the value associated with the key that terminates here."
+split lokid eqkid hikid termp value)
 
 (defstruct (tst (:include node) (:predicate tstp) (:conc-name nil))
-  "A Ternary Search Tree, providing trie-like functionality in a
-space-efficient manner."
-  (test< #'char< :type function)
-  (test= #'char= :type function)
+  "A Ternary Search Tree \(TST\), providing trie-like functionality in
+a space-efficient manner."
+  (test< +test<+ :type function)
+  (test= +test=+ :type function)
   (size 0 :type unsigned-byte))
 
-(defparameter +tst-key-args+ '(ignore-case test= test< &key)
+(defparameter +tst-key-args+ (reverse `(&key ignore-case
+					     (test= ,+test=+)
+					     (test< ,+test<+)))
   "A constant list that is spliced into lambda lists specified in
 DEFUN-TST forms.")
 
 (defun defun-tst-arg-fixer (arglist)
   "Given an ordinary lambda list, as would appear in a DEFUN form,
-return a new lambda list that includes +TST-KEY-ARGS+.  Care is taken
-to obey the ordering in an ordinary lambda list, according to CLHS
-3.4.1."
+return a new lambda list that includes the keyword arguments specified
+in +TST-KEY-ARGS+.  Care is taken to obey the ordering in an ordinary
+lambda list \(see CLHS 3.4.1\)."
   (let (spliced newargs)
     (flet ((maybe-add-key-args ()
 	     (unless spliced
