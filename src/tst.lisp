@@ -58,76 +58,46 @@ space-efficient manner."
   (test= #'char= :type function)
   (size 0 :type unsigned-byte))
 
-(defun defun-tst-arg-fixer (&rest args)
-  (let (keyp new-args)
-    (tagbody
-     PLAIN-ARGS
-       )))
+(defparameter +tst-key-args+ '(ignore-case test= test< &key)
+  "A constant list that is spliced into lambda lists specified in
+DEFUN-TST forms.")
+
+(defun defun-tst-arg-fixer (arglist)
+  "Given an ordinary lambda list, as would appear in a DEFUN form,
+return a new lambda list that includes +TST-KEY-ARGS+.  Care is taken
+to obey the ordering in an ordinary lambda list, according to CLHS
+3.4.1."
+  (let (spliced newargs)
+    (flet ((maybe-add-key-args ()
+	     (unless spliced
+	       ;; append, not nconc, because +tst-key-args+ is constant
+	       (setf newargs (append +tst-key-args+ newargs)
+		     spliced t))))
+      (dolist (a arglist)
+	(cond
+	  ((eq a '&aux)
+	   (maybe-add-key-args)
+	   (push '&aux newargs))
+	  ((eq a '&key)
+	   (maybe-add-key-args))
+	  (t (push a newargs))))
+      (maybe-add-key-args))
+    (nreverse newargs)))
 
 (defmacro defun-tst (name (&rest args) &body body)
   "Much like a regular DEFUN, taking most of the same forms, this
 macro adds :IGNORE-CASE, :TEST=, and :TEST< keyword arguments, and it
 also wraps the body inside a LET that binds TEST< and TEST= variables
-to the appropriate functions."
-  ;; Our goal is to build up a new-arg-list, either adding our
-  ;; required keywords to an existing keyword list, or splicing a
-  ;; &KEY clause into the supplied keyword list.  See the definition
-  ;; of Ordinary Lambda Lists in CL for details on where the &KEY
-  ;; must appear, it'll make the states clearer.
-  (let* (state keyp new-arg-list)
-    (tagbody
-     START
-       (setf state 'var)
-     VAR
-       (case ))
-    
-    (labels ((enter-aux-state ()
-	       (let ((old-keyp keyp))
-		 (setf state 'aux
-		       keyp t)
-		 (if old-keyp
-		     '(&aux)
-		     '(&key :ignore-case :test= :test< &aux))))
-	     (enter-key-state ()
-	       (setf state 'key
-		     keyp t)
-	       '(&key :ignore-case :test= :test<))
-	     (enter-rest-state ()
-	       (setf state 'rest)
-	       '(&rest))
-	     (enter-opt-state ()
-	       (setf state 'opt)
-	       '(&optional))
-	     (parse (a)
-	       (case state
-		  (aux (list a))
-		  (key (if (eq a '&aux)
-			   (enter-aux-state)
-			   (list a)))
-		  (rest (case a
-			  (&key (enter-key-state))
-			  (&aux (enter-aux-state))
-			  (t (list a))))
-		  (opt (case a
-			 (&rest (enter-rest-state))
-			 (&key (enter-key-state))
-			 (&aux (enter-aux-state))
-			 (t (list a))))
-		  (var (case a
-			 (&optional (enter-opt-state))
-			 (&rest (enter-rest-state))
-			 (&key (enter-key-state))
-			 (&aux (enter-aux-state))
-			 (t (list a)))))))
-      (setf new-arg-list (mapcan #'parse args)))
-    (unless keyp
-      (print 'appending)
-      (setf new-arg-list (append new-arg-list
-				'(&key :ignore-case :test= :test<))))
-    `(defun ,name ,new-arg-list
+to the appropriate functions. With this macro, we can define any
+number of functions taking any arguments, ensuring that they also
+take :IGNORE-CASE :TEST< and :TEST= in a consistent manner."
+  `(defun ,name ,(defun-tst-arg-fixer args)
+     (let ((test< (or test< (and ignore-case #'char-lessp) #'char<))
+	   (test= (or test= (and ignore-case #'char-equal) #'char=)))
+       (declare (ignorable test< test=))
        ,@body)))
 
-(defun make (&key ignore-case test= test<)
+(defun-tst make ()
   "Returns a new (empty) ternary search tree.  By default, the TST is
 set up to process its keys as strings in a case-sensitive manner, but
 this can be modified by using the following keywords.
@@ -146,8 +116,7 @@ this can be modified by using the following keywords.
   keys used in the TST.  If you specify :TEST< you should also
   specify :TEST=.  If not specified, the default function used is
   CHAR<.  This option overrides the behavior of :IGNORE-CASE."
-  (make-tst :test< (or test< (and ignore-case #'char-lessp) #'char<)
-	    :test= (or test= (and ignore-case #'char-equal) #'char=)))
+  (make-tst :test< test< :test= test=))
 
 (defun emptyp (tst)
   "Return T if the supplied ternary search tree contains zero items; else, return NIL."
