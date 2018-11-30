@@ -36,24 +36,32 @@
 ;;;
 ;;; - Not only strings, but actually any sequence of elements may be
 ;;;   stored in the tree.  TEST= and TEST< functions need to be
-;;;   supplied accordingly.
+;;;   supplied, according to the nature of the sequences being used
+;;;   for keys.
 ;;;
 ;;; - The root of a ternary search tree caches information used
 ;;;   throughout the tree, such as key comparison functions.
 ;;;
-;;; - Every node is associated with one element of a key sequence.
-;;;   When EQKID is not NIL, it contains the base of a tree of keys
-;;;   that start with all the elements leading up to this node.
-
-We
-;;;   also use the presence of a node to indicate that a given key
-;;;   element actually exists, rather than overloading the meaning
-;;;   of NULL, as in the C implementation.
+;;; - An empty TST has NIL in all three children slots, and false for
+;;;   TERMP.  But, because we cache a size in the TST root, we can
+;;;   also just test that single slot for zero, faster than testing
+;;;   four slots in a node.
 ;;;
-;;; - We use a termp ("terminated here?") slot that is set non-NIL in
-;;;   the tree when we're at a point that defines a specific key in
-;;;   the trie.  In this way, on the path "ate", you can indicate that
-;;;   "a" is a separate word in the tree (or not).
+;;; - A TST maps a key of length 0 (an empty sequence) to just the
+;;;   root node with TERMP set true.
+;;;
+;;; - A TST with a single key of length 1 contains the key's first
+;;;   (only) element in the SPLIT slot, and TERMP set in the
+;;;   (otherwise empty) node attached to EQKID.
+;;;
+;;; - The rest of the TST builds on this pattern.  The TERMP slot is
+;;;   used to indicate if this node is the "end" of the path to a
+;;;   valid key in the tree.  TERMP -> "terminated?"  This flag allows
+;;;   us to handle keys with overlapping paths in the tree (e.g., "a"
+;;;   and "ate") while still handling NIL in key sequences and values.
+;;;   The reference implementation, if you look, assumes strings and
+;;;   that nulls terminate sequences; a straight translation to Lisp
+;;;   can't, then, support a sequence that contains NIL.
 
 (defparameter +test=+ #'char=
   "Default function to use when comparing elements of a key sequence
@@ -70,7 +78,7 @@ continuing from this element, while LOKID and HIKID are the child
 trees relating to elements lower or higher than SPLIT.  TERMP
 indicates when this null is the terminating element of a key, and
 VALUE is the value associated with the key that terminates here."
-split lokid eqkid hikid termp value)
+  split lokid eqkid hikid termp value)
 
 (defstruct (tst (:include node) (:predicate tstp) (:conc-name nil))
   "A Ternary Search Tree \(TST\), providing trie-like functionality in
@@ -142,8 +150,37 @@ this can be modified by using the following keywords.
   (make-tst :test< test< :test= test=))
 
 (defun emptyp (tst)
-  "Return T if the supplied ternary search tree contains zero items; else, return NIL."
-  (zerop (tst-size tst)))
+  "Return T if the supplied ternary search tree contains zero items;
+else, return NIL."
+  (zerop (size tst)))
+
+;;; We could probably halve the number of tests in EMPTY-NODE-P by
+;;; omitting the tests on LOKID and HIKID.  However, I want to support
+;;; in-tree deletions that don't immediately rebalance the tree, so
+;;; it's conceivable that after a delete operation, you could have a
+;;; LOKID or a HIKID but not an EQKID any longer.  On the other hand,
+;;; it's likely I'll never get around to a post-delete tree re-balance
+;;; operation, making this obnoxiously over-cautious.
+
+(defun empty-node-p (node)
+  "Return T if the supplied node of a ternary search tree (including
+the root) is empty, devoid of children or terminations."
+  (and (null (node-lokid node))
+       (null (node-eqkid node))
+       (null (node-hikid node))
+       (not (node-termp node))))
+
+(defun-tst add (tst key value)
+  (labels ((insert (tst node key idx value)
+	     (cond
+	       ((= idx (length key))
+		(setf (node-termp node) t
+		      (node-value value value)))
+	       ((empty-node-p node)
+		))
+	     (incf (size tst))
+		t))
+    (insert tst tst key 0 value)))
 
 (defun copy (tst)
   "Create and return a new Ternary Search Tree which shares the key
