@@ -32,7 +32,7 @@
 ;;;   where Unicode is properly supported) as well as the null
 ;;;   character (code point 0).  This is a huge win over traditional
 ;;;   trie implementations, which can't reasonably accommodate key
-;;;   components much larger than 7 bit ASCII or 8 bit ISO 8859.
+;;;   elements much wider than 7 bit ASCII or 8 bit ISO 8859.
 ;;;
 ;;; - Not only strings, but actually any sequence of elements may be
 ;;;   stored in the tree.  TEST= and TEST< functions need to be
@@ -87,9 +87,7 @@ a space-efficient manner."
   (test= +test=+ :type function)
   (size 0 :type unsigned-byte))
 
-(defparameter +tst-key-args+ (reverse `(&key ignore-case
-					     (test= ,+test=+)
-					     (test< ,+test<+)))
+(defparameter +tst-key-args+ (reverse `(&key ignore-case test= test<))
   "A constant list that is spliced into lambda lists specified in
 DEFUN-TST forms.")
 
@@ -122,11 +120,16 @@ also wraps the body inside a LET that binds TEST< and TEST= variables
 to the appropriate functions. With this macro, we can define any
 number of functions taking any arguments, ensuring that they also
 take :IGNORE-CASE :TEST< and :TEST= in a consistent manner."
-  `(defun ,name ,(defun-tst-arg-fixer args)
-     (let ((test< (or test< (and ignore-case #'char-lessp) #'char<))
-	   (test= (or test= (and ignore-case #'char-equal) #'char=)))
-       (declare (ignorable test< test=))
-       ,@body)))
+  (let (doc)
+    (when (stringp (car body))
+      (setf doc (car body)
+	    body (cdr body)))
+    `(defun ,name ,(defun-tst-arg-fixer args)
+       ,doc
+       (let ((test< (or test< (and ignore-case #'char-lessp) +test<+))
+	     (test= (or test= (and ignore-case #'char-equal) +test=+)))
+	 (declare (ignorable test< test=))
+	 ,@body))))
 
 (defun-tst make ()
   "Returns a new (empty) ternary search tree.  By default, the TST is
@@ -170,17 +173,29 @@ the root) is empty, devoid of children or terminations."
        (null (node-hikid node))
        (not (node-termp node))))
 
+(defun add% (tst node key idx value test< test=)
+  (if (>= idx (length key))
+      (setf (node-termp node) t
+	    (size tst) (1+ (size tst))
+	    (node-value node) value)
+      (let ((new (make-node)))
+	(cond
+	  ((empty-node-p node)
+	   (setf (node-split node) (elt key idx)
+		 (node-eqkid node) new)
+	   (add% tst new key (1+ idx) value test< test=))
+	  ((funcall test= (elt key idx) (node-split node))
+	   (setf (node-eqkid node) new)
+	   (add% tst (node-eqkid node) key (1+ idx) value test< test=))
+	  ((funcall test< (elt key idx) (node-split node))
+	   (setf (node-lokid node) new)
+	   (add% tst (node-lokid node) key idx value test< test=))
+	  (t
+	   (setf (node-hikid node) new)
+	   (add% tst (node-hikid node) key idx value test< test=))))))
+
 (defun-tst add (tst key value)
-  (labels ((insert (tst node key idx value)
-	     (cond
-	       ((= idx (length key))
-		(setf (node-termp node) t
-		      (node-value value value)))
-	       ((empty-node-p node)
-		))
-	     (incf (size tst))
-		t))
-    (insert tst tst key 0 value)))
+  (add% tst tst key 0 value test< test=))
 
 (defun copy (tst)
   "Create and return a new Ternary Search Tree which shares the key
