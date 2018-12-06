@@ -71,18 +71,23 @@ for equality.")
   "Default function to use when comparing elements of a key sequence
 for less-than.")
 
+;;; In a previous version, I had the root of a TST be a node itself,
+;;; just with extra slots.  Now, I'm switch that to a more traditional
+;;; tree of nodes that is hosted in a root
+
 (defstruct node
-  "Represents every node in a ternary search tree, including the root.
-SPLIT is the element this node represents, EQKID is for further keys
-continuing from this element, while LOKID and HIKID are the child
-trees relating to elements lower or higher than SPLIT.  TERMP
-indicates when this null is the terminating element of a key, and
-VALUE is the value associated with the key that terminates here."
+  "Represents every node in a ternary search tree.  SPLIT is the
+element this node represents, EQKID is for further keys continuing
+from this element, while LOKID and HIKID are the child trees relating
+to elements lower or higher than SPLIT.  TERMP indicates when this
+null is the terminating element of a key, and VALUE is the value
+associated with the key that terminates here."
   split lokid eqkid hikid termp value)
 
-(defstruct (tst (:include node) (:predicate tstp) (:conc-name nil))
+(defstruct (tst (:predicate tstp))
   "A Ternary Search Tree \(TST\), providing trie-like functionality in
 a space-efficient manner."
+  (root (make-node) :type (or null node))
   (test< +test<+ :type function)
   (test= +test=+ :type function)
   (size 0 :type unsigned-byte))
@@ -115,31 +120,35 @@ lambda list \(see CLHS 3.4.1\)."
 
 (defmacro defun-tst (name (&rest args) &body body)
   "Much like a regular DEFUN, taking most of the same forms, this
-macro adds :IGNORE-CASE, :TEST=, and :TEST< keyword arguments, and it
-also wraps the body inside a LET that binds TEST< and TEST= variables
-to the appropriate functions. With this macro, we can define any
-number of functions taking any arguments, ensuring that they also
-take :IGNORE-CASE :TEST< and :TEST= in a consistent manner."
-  (let (doc)
-    (when (stringp (car body))
-      (setf doc (car body)
-	    body (cdr body)))
-    `(defun ,name ,(defun-tst-arg-fixer args)
-       ,doc
-       (let ((test< (or test< (and ignore-case #'char-lessp) +test<+))
-	     (test= (or test= (and ignore-case #'char-equal) +test=+)))
-	 (declare (ignorable test< test=))
-	 ,@body))))
+macro adds :IGNORE-CASE, :TEST=, and :TEST< keyword arguments to
+whatever function is being defined, and it also wraps the body inside
+a LET that binds TEST< and TEST= variables to the appropriate
+functions. With this macro, we can define any number of functions
+taking any arguments, ensuring that they also take :IGNORE-CASE :TEST<
+and :TEST= in a consistent manner.  Properly handles any Ordinary
+Lambda List for ARGS, and an optional docstring as the first element
+of BODY."
+  (let ((args (defun-tst-arg-fixer args))
+	(docp (stringp (car body))))
+    ;; Use APPEND here to make empty lists disappear, so a missing
+    ;; docstring doesn't cause a rogue NIL to appear in the resulting
+    ;; DEFUN.
+    (append `(defun ,name ,args)
+	    (when docp (list (car body)))
+	    `((let ((test< (or test< (and ignore-case #'char-lessp) +test<+))
+		    (test= (or test= (and ignore-case #'char-equal) +test=+)))
+		(declare (ignorable test< test=))
+		,@(if docp (cdr body) body))))))
 
 (defun-tst make ()
   "Returns a new (empty) ternary search tree.  By default, the TST is
 set up to process its keys as strings in a case-sensitive manner, but
 this can be modified by using the following keywords.
 
-- :IGNORE-CASE with any non-NIL value sets the TST to process keys as
-  strings in a case insensitive manner.  That is, the default use of
-  CHAR= and CHAR< to compare key elements are switched to CHAR-EQUAL
-  and CHAR-LESSP when this keyword is set.
+- :IGNORE-CASE with any true value sets the TST to process keys as
+  strings in a case insensitive manner by default.  That is, the
+  default use of CHAR= and CHAR< to compare key elements are switched
+  to CHAR-EQUAL and CHAR-LESSP when this keyword is set.
 
 - :TEST= supplies a function to be used to compare two elements of
   keys used in the TST for equality.  If you specify :TEST= you should
@@ -152,11 +161,67 @@ this can be modified by using the following keywords.
   CHAR<.  This option overrides the behavior of :IGNORE-CASE."
   (make-tst :test< test< :test= test=))
 
-(defun emptyp (tst)
-  "Return T if the supplied ternary search tree contains zero items;
-else, return NIL."
-  (zerop (size tst)))
+(defun size (tst)
+  "Returns the number of values stored in the supplied Ternary Searh
+Tree."
+  (tst-size tst))
 
+(defun emptyp (tst)
+  "Return T if the supplied ternary search tree contains zero values;
+else, return NIL.  Note that this does not mean the TST has no nodes,
+but only that there are no values currently stored within it."
+  (zerop (tst-size tst)))
+
+(defun empty-node-p (node)
+  "Return T when the supplied node in a TST contains no children."
+  (and (null (node-lokid node))
+       (null (node-eqkid node))
+       (null (node-hikid node))))
+
+(defun add% (node key idx test< test=)
+  "Given a node somewhere in a Ternary Search Tree, follow nodes in
+the tree that correspond to the elements of KEY starting from the
+index IDX to the tree.  New nodes are added where necessary.  The
+final node is marked as such (TERMP) in the path that represents KEY
+is returned.  TEST< and TEST= are used to compare individual elements
+of the key."
+  ;; The ENSURE might look a little funny, but it allows us to write
+  ;; ADD% in a way that is amenable to Tail Call Optimization
+  ;; (specifically, to allow the compiler to recognize Tail Recursion).
+  (macrolet ((ensure (place)
+	       (let ((val (gensym)))
+		 `(let ((,val ,place))
+		    (or ,val (setf ,place (make-node)))))))
+    (cond
+      ((>= idx (length key))
+       (setf (node-termp node) t)
+       node)
+      (t
+       (let ((el (elt key idx)))
+	 (cond
+	   ((null (node-eqkid node))
+	    (setf (node-split node) el)
+	    (add% (ensure (node-eqkid node)) key (1+ idx) test< test=))
+	   ((funcall test= el (node-split node))
+	    (add% (node-eqkid node) key (1+ idx) test< test=))
+	   ((funcall test< el (node-split node))
+	    (add% (ensure (node-lokid node)) key idx test< test=))
+	   (t
+	    (add% (ensure (node-hikid node)) key idx test< test=))))))))
+
+(defun-tst add (tst key value)
+  "Add a VALUE to the supplied Ternary Search Tree associated with the
+supplied KEY sequence.  Comparisons between elements of the KEY are
+performed according to functions set when the TST was created, but
+these can be overridden for a call through the :IGNORE-CASE :TEST<
+and :TEST= keywords \(see the documentation for MAKE for a detailed
+explanation\).  The TST is returned from ADD."
+  (setf (node-value (add% (tst-root tst) key 0 test< test=)) value)
+  (incf (tst-size tst))
+  tst)
+
+
+#|
 ;;; We could probably halve the number of tests in EMPTY-NODE-P by
 ;;; omitting the tests on LOKID and HIKID.  However, I want to support
 ;;; in-tree deletions that don't immediately rebalance the tree, so
@@ -203,3 +268,4 @@ elements and values of the source TST, but has its own distinct
 structure.  Modifications to the returned tree are independent of the
 source tree, but stored values may be shared betwen the two."
   nil)
+|#
