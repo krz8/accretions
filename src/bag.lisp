@@ -1,12 +1,5 @@
 ;;;; a bag is an unordered collection of items
 
-;; (eval-when (:compile-toplevel)
-;;   (print "compiling bag"))
-;; (eval-when (:load-toplevel)
-;;   (print "loading bag"))
-;; (eval-when (:execute)
-;;   (print "executing bag"))
-
 (defpackage :accretions/src/bag
   (:use #:cl)
   (:export #:bag #:make #:copy #:bagp

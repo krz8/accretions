@@ -2,9 +2,7 @@
 
 (defpackage :accretions/src/tst
   (:use #:cl)
-  (:export #:tst #:make #:copy #:tstp
-	   #:size #:lokid #:hikid
-	   #:emptyp #:add #:mapfun))
+  (:export #:tst #:make #:copy #:tstp #:size #:emptyp #:add))
 (in-package :accretions/src/tst)
 
 ;;; As described by Sedgewick and Bentley, Ternary Search Trees offer
@@ -178,36 +176,44 @@ but only that there are no values currently stored within it."
        (null (node-eqkid node))
        (null (node-hikid node))))
 
-(defun add% (node key idx test< test=)
+(defun add% (tst node key value idx test< test=)
   "Given a node somewhere in a Ternary Search Tree, follow nodes in
 the tree that correspond to the elements of KEY starting from the
 index IDX to the tree.  New nodes are added where necessary.  The
 final node is marked as such (TERMP) in the path that represents KEY
-is returned.  TEST< and TEST= are used to compare individual elements
-of the key."
+is returned, and its VALUE is updated with the supplied parameter.
+TEST< and TEST= are used to compare individual elements of the key."
   ;; The ENSURE might look a little funny, but it allows us to write
-  ;; ADD% in a way that is amenable to Tail Call Optimization
-  ;; (specifically, to allow the compiler to recognize Tail Recursion).
+  ;; ADD% in a way that is amenable to tail call optimization
+  ;; (specifically, to allow the compiler to recognize tail
+  ;; recursion and avoid the stack overhead).
   (macrolet ((ensure (place)
 	       (let ((val (gensym)))
 		 `(let ((,val ,place))
 		    (or ,val (setf ,place (make-node)))))))
     (cond
       ((>= idx (length key))
-       (setf (node-termp node) t)
+       (unless (node-termp node)
+	 (setf (node-termp node) t
+	       (node-value node) value)
+	 (incf (tst-size tst)))
        node)
       (t
        (let ((el (elt key idx)))
 	 (cond
 	   ((null (node-eqkid node))
 	    (setf (node-split node) el)
-	    (add% (ensure (node-eqkid node)) key (1+ idx) test< test=))
+	    (add% tst (ensure (node-eqkid node))
+		  key value (1+ idx) test< test=))
 	   ((funcall test= el (node-split node))
-	    (add% (node-eqkid node) key (1+ idx) test< test=))
+	    (add% tst (node-eqkid node)
+		  key value (1+ idx) test< test=))
 	   ((funcall test< el (node-split node))
-	    (add% (ensure (node-lokid node)) key idx test< test=))
+	    (add% tst (ensure (node-lokid node))
+		  key value idx test< test=))
 	   (t
-	    (add% (ensure (node-hikid node)) key idx test< test=))))))))
+	    (add% tst (ensure (node-hikid node))
+		  key value idx test< test=))))))))
 
 (defun-tst add (tst key value)
   "Add a VALUE to the supplied Ternary Search Tree associated with the
@@ -216,8 +222,7 @@ performed according to functions set when the TST was created, but
 these can be overridden for a call through the :IGNORE-CASE :TEST<
 and :TEST= keywords \(see the documentation for MAKE for a detailed
 explanation\).  The TST is returned from ADD."
-  (setf (node-value (add% (tst-root tst) key 0 test< test=)) value)
-  (incf (tst-size tst))
+  (add% tst (tst-root tst) key value 0 test< test=)
   tst)
 
 

@@ -1,13 +1,13 @@
 ;;;; tests the bag implementation
 #-asdf3.1 (error "ACCRETIONS/TEST/BAG requires ASDF 3.1.2 or later")
 
-(defpackage #:accretions/test/bag
+(defpackage :accretions/test/bag
   (:use #:cl #:fiveam)
   (:export #:bag #:make #:copy #:size #:emptyp #:add #:add-many))
-(in-package #:accretions/test/bag)
+(in-package :accretions/test/bag)
 
 (uiop:define-package #:bag		; glue
-    (:use-reexport #:accretions/src/bag))
+    (:use-reexport :accretions/src/bag))
 
 (defparameter +many+ 1000000
   "How many long doubles to add to a bag when testing many additions.")
