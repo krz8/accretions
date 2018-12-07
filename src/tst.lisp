@@ -2,7 +2,7 @@
 
 (defpackage :accretions/src/tst
   (:use #:cl)
-  (:export #:tst #:make #:copy #:tstp #:size #:emptyp #:add))
+  (:export #:tst #:make #:copy #:tstp #:size #:emptyp #:add #:mapfun))
 (in-package :accretions/src/tst)
 
 ;;; As described by Sedgewick and Bentley, Ternary Search Trees offer
@@ -88,7 +88,8 @@ a space-efficient manner."
   (root (make-node) :type (or null node))
   (test< +test<+ :type function)
   (test= +test=+ :type function)
-  (size 0 :type unsigned-byte))
+  (size 0 :type unsigned-byte)
+  (eltype nil))
 
 (defparameter +tst-key-args+ (reverse `(&key ignore-case test= test<))
   "A constant list that is spliced into lambda lists specified in
@@ -222,5 +223,30 @@ performed according to functions set when the TST was created, but
 these can be overridden for a call through the :IGNORE-CASE :TEST<
 and :TEST= keywords \(see the documentation for MAKE for a detailed
 explanation\).  The TST is returned from ADD."
+  ;; The first time we store a non-NIL non-empty KEY sequence, cache
+  ;; the type of its elements into the TST itself so that we can
+  ;; reassemble keys of the same type later in MAPFUN.
+  (unless (or (null key) (zerop (length key)))
+    (when (null (tst-eltype tst))
+      (setf (tst-eltype tst) (type-of (elt key 0)))))
+  ;; Now, recurse through the tree.
   (add% tst (tst-root tst) key value 0 test< test=)
   tst)
+
+;; testing a shortcut
+
+(defun mapfun (tst fn)
+  "For every key/value pair in the supplied Ternary Search Tree, call
+FN with two arguments that are a key and its associated value.  The
+tree is walked in ascending order according to previous calls to
+ADD."
+  (let ((key (make-array 0 :element-type (tst-eltype tst)
+			 :adjustable t :fill-pointer 0)))
+    (labels ((map% (node fn)
+	       (when node
+		 (map% (node-lokid node) fn)
+		 (vector-push-extend (node-split node) key)
+		 (when (node-termp node)
+		   (funcall fn key (node-value node)))
+		 (map% (node-hikid node) fn))))
+      (map% (tst-root tst) fn))))
