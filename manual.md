@@ -20,6 +20,11 @@ client code as collection types change or are compared with one
 another.  Conditions are adopted as the general error reporting
 facility, rather than return codes.
 
+**NOTE**: Don't let that bother you much.  Errors and failures are
+  different things, and thus you aren't likely to encounter error
+  conditions at all.  For example, looking up GOO in a list of FOO BAR
+  BAZ is a failure, but not an error.
+
 Accretions _also_ supports using any data collection type directly in
 a resource constrained environment, without dragging in all of the
 CLOS functionality (e.g., using structures instead of classes, regular

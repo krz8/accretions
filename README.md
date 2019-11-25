@@ -8,9 +8,10 @@ Overview
 
 Accretions is a collection of data structures that aren't present in
 standard Common Lisp.  Of course, we already have lists, and most CL
-implementation also have performant hash tables.  But there remain
-other data structures that are essential to certain applications.
-Accretions is my collection of them.
+implementation have performant hash tables.  But there remain other
+data structures that are essential to certain applications that are
+missing from the standard.  Accretions is my collection of good (or,
+at least useful) implementations them.
 
 Accretions would not exist without the essential work of Donald Knuth,
 Robert Sedgewick, Jon Bentley, Doug Hoyte, and others.
@@ -37,9 +38,9 @@ Functionality
   Aside: The widespead adoption of Unicode, while a good thing, killed
   much of the use of trie structures in memory.  One widely adopted
   approach to dealing with Unicode in trie structures was to maintain
-  strings in an encoding like UTF-8 rather than native codepoints.
-  Here, the use of ternary search trees instead of tries is a much
-  more convenient solution (imho).
+  strings in an encoding like UTF-8 rather than native codepoints.  In
+  my opinion, the use of ternary search trees instead of old-style
+  tries to be a much more convenient solution.
 
 - Red-Black Trees
 
@@ -55,21 +56,23 @@ Functionality
 
 - more as I need them and study them; feel free to suggest something!
 
-#### API
+#### Structure
 
-At its top level, Accretions provides a package that grants access to
-all the collections and algorithms listed above.  Generic functions
-are heavily leveraged such that different collections can be swapped
-and evaluated without change much client code at all.  Sometimes, in
-fact, all that's required is merely setting a flag.
+Accretions is structured in two levels.
 
-Additionally, the individual collections and their functionality in
-Accretions is also available directly, without the overhead of CLOS
-generic functions.  CLOS is still used for the data structures themselves,
-but manipulations are carried out with regular (non-generic) functions.
-These are intended for resource-constrained environments; pulling in
-the entire Accretions package might be a headache when all one needs
-are **bags**.
+* Accretions provides a single package that grants access to all the
+  collections and algorithms listed above via a (somewhat rich) set of
+  generic functions.  This is the expected usage of Accretions.
+
+* Accretions also provides a standalone package for each collection.
+  This is especially useful for resource-constrained environments,
+  where code size is to be conserved or code overhead should be
+  minimized.  For example, pulling in the enter Accretions package
+  might be prohibitive in some systems when all one needs are
+  **bags**.
+
+The top level API, as well as the API for the individual collection
+implementations, are detailed in the [manual][manual].
 
 
 
@@ -101,7 +104,7 @@ License
 
 Accretions is available under the [MIT License][].
 
-Copyright © 2018 Robert S. Krzaczek
+Copyright © 2018, 2019 Robert S. Krzaczek
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the

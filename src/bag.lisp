@@ -27,6 +27,9 @@ existing values are shared between the two."
   (make :head (copy-list (head bag))
 	:size (size bag)))
 
+(setf (documentation 'head 'function) "Returns the number of items
+present in the supplied BAG.")
+
 (defun emptyp (bag)
   "Return T if the supplied BAG contains zero items; else, return NIL."
   (null (head bag)))
@@ -41,13 +44,25 @@ existing values are shared between the two."
 
 (defun add (bag value)
   "Add the supplied VALUE to the BAG, returning that BAG.  Duplicate
-VALUE are supported; calling (ADD NIL) three times yields a BAG with
-three NIL values."
+VALUE within the BAG supported; calling \(ADD NIL\) three times yields
+a BAG with \(at least\) three NIL values."
   (setf (head bag) (cons value (head bag)))
   (incf (size bag))
   bag)
 
 (defun mapfun (bag function)
   "For every value in the BAG, call the supplied FUNCTION designator
-with that value as an argument.  Returns T."
-  (mapc function (head bag)))
+with that value as an argument.  Always returns T, regardless of the
+return values of FUNCTION or the size of the BAG."
+  (mapc function (head bag))
+  t)
+
+(defun hasp (bag value)
+  "Tests for the presence of VALUE in the BAG, returning two values.
+The first value returned is VALUE if found in the BAG, else NIL.  The
+second value is always T or NIL, reflecting whether the value was
+found.  This mimics the Common Lisp GETHASH, maintaining a useful
+idiom for the primary return value while resolving the ambiguity
+surrounding a search for a NIL value."
+  (let ((x (member value (head bag))))
+    (values (car x) (not (null x)))))
