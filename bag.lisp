@@ -15,16 +15,17 @@
 (in-package :accretions/bag)
 
 ;;; We use native hash tables to implement the bag type.  This
-;;; hopefully strike a good balance between speed and size, with the
+;;; hopefully strikes a good balance between speed and size, with the
 ;;; caveat that performance on _small_ bags suffers compared to simple
-;;; lists.  Other possibilities are simple lists, and associative
-;;; lists (used similar to the hash table approach below.
+;;; lists.  We may offer other bags that use lists instead of hash
+;;; tables in the future, just in case there's a need for heavy use of
+;;; small bags.
 ;;;
 ;;; However, one annoying "glitch" in the hash table specification of
 ;;; Common Lisp is that there are patterns where GETHASH is called
 ;;; twice for the same key in succession.  For example, one often must
 ;;; call GETHASH to look up a value, and then call it again when
-;;; updating the value.  It would be helpful to somehow cache that
+;;; updating that value.  It would be helpful to somehow cache that
 ;;; lookup so that the update can reuse it without recomputing the
 ;;; hash.  (Aside: this is exactly what SBCL does; it hides a fun hack
 ;;; where the last GETHASH is cached, and if a new GETHASH uses a key
@@ -32,15 +33,17 @@
 ;;; obviously, this is unique to SBCL, and it only works for the most
 ;;; recent lookup.)
 ;;;
-;;; So, we'll take a _slightly_ unusual approach here, and store a
-;;; CONS as the value for a given key in the hash.  We no longer
-;;; increment a value in the hash, we increment a place whose address
-;;; is stored in the hash.  In this common case, the hash and hash
-;;; lookup is only performed once.  Of course, the first time a new
-;;; value is seen by our bag, that will yield the old pattern of
-;;; calling GETHASH twice.  So, at worst, we're no worse than the
-;;; usual behavior, and at best, we avoid nearly half the calls to
-;;; GETHASH (and SXHASH and friends).
+;;; Extended hash table API, like SBCL's, are common among different
+;;; lisp implementations; none of them are standard, however.  So,
+;;; we'll take a _slightly_ unusual approach here, and store a CONS as
+;;; the value for a given key in the hash.  We no longer increment a
+;;; value in the hash, we increment a place whose address is stored in
+;;; the hash.  In this common case, the hash and hash lookup is only
+;;; performed once.  Of course, the first time a new value is seen by
+;;; our bag will still yield the old pattern of calling GETHASH twice.
+;;; So, at worst, we're no worse than the usual behavior, and at best,
+;;; we avoid nearly half the calls to GETHASH (and SXHASH and
+;;; friends).
 
 ;;; There's no easy way (that I know) to limit the DEFSETF forms
 ;;; created by DEFSTRUCT from being exported; that is, how can we
@@ -54,8 +57,8 @@
 ;;; DEFSTRUCT are not the same as the names we're going to export.
 ;;; Also, mark them for inlining.  Then, we can create our own
 ;;; functions for export, inlining the generated code into them.
-;;; Creating our own functions ensures they do exactly what we want,
-;;; no more or less, and that they serve the API we want.  Using
+;;; Creating our own functions will ensure they do exactly what we
+;;; want, no more or less, and that they serve the API we want.  Using
 ;;; inline forms ensures that we don't pay any sort of double function
 ;;; call penalty for doing this; it wouldn't matter for larger
 ;;; functions as it would just get "lost in the noise", but usually
@@ -63,11 +66,12 @@
 ;;; noticed.
 
 (defvar *testfn* #'eql
-  "The function used to test for equality between keys in a bag's hash
-table.  This value is used only when a bag is created anew, setting
-the key test of the underlying hash table.  This exists specifically
-to link the argument supplied to MAKE with BAG's constructor, which
-has no such API.")
+  "The function used to test for equality between items in a
+bag (i.e., keys in a bag's hash table).  This value is used only when
+a bag is created anew, setting the key test function of the underlying
+hash table.  This exists specifically to link the argument supplied to
+MAKE with BAG's constructor (provided by DEFSTRUCT), which has no such
+API.")
 
 (declaim (inline %bag-make %bag-p %bag-head %bag-size))
 (defstruct (bag (:conc-name "%BAG-") (:copier %bag-copy)
@@ -78,16 +82,22 @@ collections, bags only accumulate values and do not support deletion."
   (size 0 :type unsigned-byte))
 
 (defun make (&key (test #'eql))
-  "Returns a newly created BAG containing no values.  By default, the
-hash table underlying the newly created bag uses EQL as its function
-to test key equality; this can be changed by specifying a different to
-the :TEST keyword argument."
+  "Returns a newly created BAG containing no items.  Items are tested
+for equality using EQL, unless the TEST keyword is used to supply a
+different function."
   (declare (inline %bag-make))
   (let ((*testfn* test))
     (%bag-make)))
 
+(defun count (bag &optional item)
+  "Returns a count of items in the bag.  By default, the total number of items in the bag is returned.  However, if the ITEM argument is provided, then the total count of just that item appearing in the bag is returned.")
+
+;; :test #'foo with hash keys, from alexandria? how useful? does it
+;; just maphash underneath? if so, skip alexandria and map ourselves
+;; instead, running an accumulator of hash values.
+
 (defun size (bag)
-  "Returns the number of values that have been added to a BAG."
+  "Returns the number of items that have been added to a BAG."
   (declare (inline %bag-size))
   (%bag-size bag))
 
