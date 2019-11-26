@@ -93,22 +93,6 @@ the :TEST keyword argument."
   (declare (inline %bag-size))
   (zerop (%bag-size bag)))
 
-;; move table and test into test/bag.lisp it's not such a big deal if
-;; we lose the inline nature of the calls, this isn't client code
-
-(defun table (bag)
-  "Returns the hash table used in the BAG.  This is sometimes used in
-test cases, but it should not be generally exported."
-  (declare (inline %bag-hash))
-  (%bag-hash bag))
-
-(defun testfn (bag)
-  "Returns the function used to test equality in the bag's underlying
-hash table.  This is sometimes used in test cases, but it should not
-be generally exported."
-  (declare (inline %bag-hash))
-  (hash-table-test (%bag-hash bag)))
-
 (defun add (bag value)
   "Add the supplied VALUE to the BAG, returning that same BAG.
 Duplicate VALUE within the BAG is supported; calling \(ADD NIL\) three

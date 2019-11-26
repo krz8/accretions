@@ -33,7 +33,16 @@ Examples:
 
 (defmacro bag-test-is (expected &rest args)
   `(with-new-bag b ,args
-     (is (eq ,expected (accretions/bag::testfn b)))))
+     (is (eq ,expected (testfn b)))))
+
+(defun table (bag)
+  "Returns the hash table used in the BAG."
+  (accretions/bag::%bag-hash bag))
+
+(defun testfn (bag)
+  "Returns the function used to test equality in the bag's underlying
+hash table."
+  (hash-table-test (accretions/bag::%bag-hash bag)))
 
 (test make
   "Tests bag creation."
