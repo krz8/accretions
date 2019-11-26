@@ -63,11 +63,11 @@ collections and algorithms listed above via a (somewhat rich) set of
 generic functions.  This is the expected usage of Accretions.
 
 Additionally, Accretions also provides standalone packages for each
-collection in a "one package, one file" manner.  This is especially
-useful for resource-constrained environments, where code size is to be
-conserved or code overhead should be minimized.  For example, pulling
-in the enter Accretions package might be prohibitive in some systems
-when all one needs is a **bag**.
+type of collection in a "one package, one file" manner.  This is
+especially useful for resource-constrained environments, where code
+size is to be conserved or code overhead should be minimized.  For
+example, pulling in the enter Accretions package might be prohibitive
+in some systems when all one needs is a **bag**.
 
 The top level API, as well as the API for the individual collection
 implementations, are detailed in the [manual][manual].

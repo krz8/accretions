@@ -69,7 +69,12 @@ The author recommends the use of a “glue” package to add Accretions to
 your code.  Certainly, you are free to introduce Accretions to your
 application through other methods (package nicknames, package
 imports), but the glue approach is recommended as annoying naming
-conflicts are easy to avoid in your code.
+conflicts are easy to avoid in your code.  If you choose some other method
+of working with Accretions, be sure to take into account the Common Lisp
+symbols that Accretions shadows.
+
+But if you go with the recommended approach ("glue"), it's just two
+lines of code that represent these steps:
 
 1. Choose a name with which to refer to Accretions in your client
    software.  This name should be short and must be unique.  In the
@@ -183,7 +188,7 @@ Using Individual Packages from Accretions
 ### Package Access
 
 As with the main Accretions package, the author recommends the use of
-a glue package.  For example, to access just the Bag functionality of
+a glue package.  For example, to access only the Bag functionality of
 Accretions in your project, calling it **bag**, use something like the
 following.
 
@@ -194,6 +199,10 @@ following.
   (:use-reexport #:accretions/bag))
 ```
 
+Remember that while this is the recommended approach, you are free
+to pull the Accretions package into your code in other ways.  Just
+be aware that some Common Lisp symbols are shadowed by the Accretions
+packages.
 
 
 Bags
