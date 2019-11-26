@@ -28,7 +28,8 @@ Functionality
 
 #### Collections
 
-- Bags (aka Multisets): Simple un-ordered collections of values.
+- Bags (aka Multisets): Simple un-ordered collections of items (any
+  legitimate value).
 
 - Ternary Search Trees: A really nice collection somewhere between
   hash tables and tries.  The implementation here allows for any

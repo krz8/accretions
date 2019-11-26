@@ -110,23 +110,37 @@ Accretions distinguishes between two different kinds of collections.
 A **kv-collection** is a collection of keys and their associated
 values (e.g., a hash).
 
-A **value-collection** is a collection of independent values (e.g., a
-set).
+An **item-collection** is a collection of independent items (e.g., a
+set), where an "item" is any legitimate lisp value.
 
-### <strong>make</strong> type <strong>&key</strong> test key-test value-test
+All aforementioned collections are a subtype of the **collection**
+type.
+
+### <strong>make</strong> type <strong>&key</strong> test key-test value-test item-test
 
 Creates and returns a new collection according to the **type**
 argument, which must be one of the following keywords:
 
-**:bag** | value-collection | Creates and returns a Bag
-**:tst** | kv-collection | Creates and returns a Ternary Search Tree
-**:rbt** | kv-collection | Creates and returns a Red-Black Tree 
+**:bag** | item-collection | Creates and returns a Bag
+**:ternary**, **:tst** | kv-collection | Creates and returns a Ternary Search Tree
+**:redblack**, **:rbt** | kv-collection | Creates and returns a Red-Black Tree 
 
 All tests for equality within the returned collection default to EQL.
-However, the TEST keyword may be used to change this for
-value-collections.  Similar changes are supported for kv-collections
-using KEY-TEST and VALUE-TEST.
+Keywords are provided that can be used to change the test function used in
+different collection types.
 
+* When creating an **item-collection**, the ITEM-TEST or TEST
+  keywords can be used to specify a test function other than EQL.  If
+  both are specified, ITEM-TEST takes priority.  TEST is provided
+  simply for convenience.
+
+* When creating a **kv-collection**, the KEY-TEST, VALUE-TEST, and
+  TEST keywords can be used to change the default test functions.  The
+  KEY-TEST or TEST keywords can be used to change the test function
+  used to compare keys; if both are specified, KEY-TEST takes
+  priority.  Similarly, VALUE-TEST can be used to change the function
+  comparing values in the collection.
+  
 ### <strong>copy</strong> collection
 
 Given an Accretions collection, this function returns a new _shallow
@@ -146,7 +160,7 @@ suits your use of Accretions in your project.
 Returns NIL if the supplied collection contains anything; otherwise,
 it returns T.
 
-### <strong>size</strong> value-collection
+### <strong>size</strong> item-collection
 
 Returns the number of values held within the collection as an unsigned
 byte.
@@ -156,18 +170,18 @@ byte.
 Returns the number of keys held within the collection as an unsigned
 byte.
 
-### <strong>add</strong> value-collection value
+### <strong>add</strong> item-collection value
 
-Returns the supplied VALUE-COLLECTION after adding VALUE to it.
+Returns the supplied ITEM-COLLECTION after adding VALUE to it.
 
 ### <strong>add</strong> kv-collection key value
 
 Returns the supplied KV-COLLECTION after associating VALUE to KEY
 within it.
 
-### <strong>del</strong> value-collection value
+### <strong>del</strong> item-collection value
 
-Returns the supplied VALUE-COLLECTION after removing up to one
+Returns the supplied ITEM-COLLECTION after removing up to one
 instance of VALUE within it.
 
 ### <strong>del</strong> kv-collection key
@@ -175,9 +189,9 @@ instance of VALUE within it.
 Returns the supplied KV-COLLECTION after removing up to one instance
 of KEY and its associated value within it.
 
-### <strongp>hasp</strong> value-collection value
+### <strongp>hasp</strong> item-collection value
 
-Returns T if the supplied VALUE-COLLECTION contains at least one of
+Returns T if the supplied ITEM-COLLECTION contains at least one of
 VALUE; else, it returns NIL.
 
 
@@ -246,10 +260,10 @@ crap crap crap crap crap crap crap crap crap crap crap crap
 
 The collections supplied by Accretions fall into one of two classes.
 
-**value-collection**
+**item-collection**
 Some collections are simply made up of single values, typically added
 one at a time through ADD or some other mechanism.  For example,
-a Bag or a Stack are simple value-collections.
+a Bag or a Stack are simple item-collections.
 
 **kv-collection**
 Other collections are made up of item pairs, a key and its value.
@@ -289,7 +303,7 @@ application, it should be easy to construct a clone function that
 suits your use of Accretions in your project.
 
 
-#### <strong>add</strong> value-collection value
+#### <strong>add</strong> item-collection value
 
 Add the supplied VALUE to the supplied COLLECTION.
 
@@ -300,7 +314,7 @@ Associates the supplied KEY with a supplied VALUE in the supplied
 COLLECTION.
 
 
-#### <strong>mapfun</strong> value-collection function
+#### <strong>mapfun</strong> item-collection function
 
 Corresponds to standard CL functions such as MAPC and MAP.
 For every item in the supplied COLLECTION, the supplied
