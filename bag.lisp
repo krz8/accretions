@@ -8,8 +8,10 @@
   (print "executing bag"))
 
 (defpackage :accretions/bag
+  (:shadow #:map #:count)
   (:use #:cl)
-  (:export #:bag #:make #:size #:emptyp #:add))
+  (:export #:bag #:make #:size #:emptyp #:add #:bagp #:copy #:map
+	   #:hasp #:count))
 (in-package :accretions/bag)
 
 ;;; We use native hash tables to implement the bag type.  This
@@ -27,7 +29,8 @@
 ;;; hash.  (Aside: this is exactly what SBCL does; it hides a fun hack
 ;;; where the last GETHASH is cached, and if a new GETHASH uses a key
 ;;; that is EQ to the last key, the cached return is used again.  But,
-;;; obviously, this is unique to SBCL.)
+;;; obviously, this is unique to SBCL, and it only works for the most
+;;; recent lookup.)
 ;;;
 ;;; So, we'll take a _slightly_ unusual approach here, and store a
 ;;; CONS as the value for a given key in the hash.  We no longer
@@ -106,71 +109,53 @@ times yields a BAG with \(at least\) three NIL values."
   (incf (%bag-size bag))
   bag)
 
-#|
-
-(defun head (bag)
-  "Returns the list component of a BAG."
-  (declare (inline %bag-head))
-  (%bag-head bag))
-
 (defun bagp (thing)
   "Returns T if THING is a BAG, otherwise NIL."
-  (declare (inline %bagp))
-  (%bagp thing))
+  (declare (inline %bag-p))
+  (%bag-p thing))
 
 (defun copy (bag)
-  "Creates and returns a shallow copy of the supplied BAG.  New
-values may be added to either BAG without affecting the other, but
-any values present in the source BAG when COPY is called are
-shared with the returned BAG."
-  (%bag-make :head (%bag-head bag)
-		 :size (%bag-size bag)))
+  "Returns a new bag that is a copy of the supplied BAG.  The actual
+items seen by the original and the returned bags may be shared, while
+the counts \(how many times an item has been seen\) are unique to each
+bag.  There's no useful definition of \"shallow\" or \"deep\" copies
+of this implementation of a bag."
+  (let* ((baghash (%bag-hash bag))
+	 (newhash (make-hash-table :test (hash-table-test baghash))))
+    (maphash #'(lambda (k v) (setf (gethash k newhash) (cons (car v) nil)))
+	     baghash)
+    (%bag-make :hash newhash :size (%bag-size bag))))
 
-;;; We used to test that the CONS succeeded before modifying the list;
-;;; the idea was that CONS is really the only thing that could fail in
-;;; ADD.  In practice, though, any situation that leads to a CONS
-;;; failure should raise an error condition of some kind.  In other
-;;; words, CONS doesn't have a failure return.  For that reason, ADD
-;;; no longer tests anything, on the assumption that if an error is
-;;; not raised, the operation is successful.
-
-(defun add (bag value)
-  "Add the supplied VALUE to the BAG, returning that same BAG.
-Duplicate VALUE within the BAG supported; calling \(ADD NIL\)
-three times yields a BAG with \(at least\) three NIL values."
-  (declare (inline %bag-head %bag-size))
-  (setf (%bag-head bag) (cons value (%bag-head bag)))
-  (incf (%bag-size bag))
-  bag)
-
-(defun mapfun (bag function)
-  "For every value in the BAG, call the supplied FUNCTION designator
-with that value as an argument.  Always returns T, regardless of the
-return values of FUNCTION or the size of the BAG."
-  (declare (inline %bag-head))
-  (mapc function (%bag-head bag))
+(defun map (bag function)
+  "For every item in the BAG, call the supplied FUNCTION designator
+with that value as an argument.  The return value of FUNCTION is
+considered a generalized boolean.  MAPFUN continues callng FUNCTION
+once for every value in the bag \(including duplicate values\), unless
+FUNCTION returns a false value.  MAPFUN returns T if FUNCTION never
+returned false and the entire bag was traversed; otherwise NIL."
+  (declare (inline %bag-hash))
+  (maphash #'(lambda (k v)
+	       (dotimes (i (car v))
+		 (unless (funcall function k)
+		   (return-from map nil))))
+	   (%bag-hash bag))
   t)
 
-(defun hasp (bag value &key (test #'eql))
-  "Tests for the presence of VALUE in the BAG, returning two values.
-The first value returned is VALUE if found in the BAG, else NIL.  The
-second value is always T or NIL, reflecting whether the value was
-found.  This mimics the Common Lisp GETHASH, maintaining a useful
-idiom for the primary return value while resolving the ambiguity
-surrounding a search for a NIL value.  The TEST keyword can be used to
-change the test for equality from its default of EQL."
-  (declare (inline %bag-head))
-  (let ((x (member value (%bag-head bag) :test test)))
-    (values (car x) (not (null x)))))
+(defun hasp (bag value)
+  "Returns T if VALUE appears at least once in the supplied BAG;
+otherwise, returns NIL."
+  (declare (inline %bag-hash))
+  (multiple-value-bind (v s)
+      (gethash value (%bag-hash bag))
+    (declare (ignore v))
+    (and s t)))
 
-(defun cnt (bag value &key (test #'eql))
-  "Return the number of tims that VALUE appears within the supplied
-BAG.  The TEST keyword can be used to change the test for equality
-from its default of EQL.  This function has different runtime
-characteristics from HASP, hence its separate implementation."
-  (declare (inline %bag-head))
-  (count value (%bag-head bag) :test test))
-
-|#
+(defun count (bag value)
+  "Returns the number of times that VALUE has been seen in the
+supplied BAG."
+  (declare (inline %bag-hash))
+  (multiple-value-bind (v s)
+      (gethash value (%bag-hash bag))
+    (or (and s (car v)) 0)))
 
 (declaim (notinline %bag-make %bagp %bag-head %bag-size))
