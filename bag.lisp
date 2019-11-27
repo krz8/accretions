@@ -8,10 +8,9 @@
   (print "executing bag"))
 
 (defpackage :accretions/bag
-  (:shadow #:map #:count)
   (:use #:cl)
-  (:export #:bag #:make #:size #:emptyp #:add #:bagp #:copy #:map
-	   #:hasp #:count))
+  (:export #:bag #:make #:bagp #:emptyp #:hasp #:count #:add #:copy #:map)
+  (:shadow #:count #:map))
 (in-package :accretions/bag)
 
 ;;; We use native hash tables to implement the bag type.  This
@@ -89,60 +88,69 @@ different function."
   (let ((*testfn* test))
     (%bag-make)))
 
-(defun count (bag &optional item)
-  "Returns a count of items in the bag.  By default, the total number of items in the bag is returned.  However, if the ITEM argument is provided, then the total count of just that item appearing in the bag is returned.")
-
-;; :test #'foo with hash keys, from alexandria? how useful? does it
-;; just maphash underneath? if so, skip alexandria and map ourselves
-;; instead, running an accumulator of hash values.
-
-(defun size (bag)
-  "Returns the number of items that have been added to a BAG."
-  (declare (inline %bag-size))
-  (%bag-size bag))
+(defun bagp (thing)
+  "Returns T if THING is a BAG, otherwise NIL."
+  (declare (inline %bag-p))
+  (%bag-p thing))
 
 (defun emptyp (bag)
   "Return T if the supplied BAG contains zero items; else, return NIL."
   (declare (inline %bag-size))
   (zerop (%bag-size bag)))
 
-(defun add (bag value)
-  "Add the supplied VALUE to the BAG, returning that same BAG.
-Duplicate VALUE within the BAG is supported; calling \(ADD NIL\) three
-times yields a BAG with \(at least\) three NIL values."
+(defun hasp (bag item)
+  "Returns T if ITEM appears at least once in the supplied BAG;
+otherwise, returns NIL."
+  (declare (inline %bag-hash))
+  (multiple-value-bind (v s) (gethash item (%bag-hash bag))
+    (declare (ignore v))
+    (and s t)))
+
+(defun count (bag &optional (item nil itemp))
+  "Returns a count of items in the bag as an unsigned integer.  By default,
+the total number of items in the bag is returned.  However, if the
+ITEM argument is provided, then the total count of just that item
+appearing in the bag is returned."
+  (declare (inline %bag-size %bag-hash))
+  (if itemp
+      (multiple-value-bind (value found) (gethash item (%bag-hash bag))
+	(or (and found (car value)) 0))
+      (%bag-size bag)))
+
+(defun add (bag item)
+  "Add the supplied ITEM to the BAG, returning that same BAG.
+ITEM can be any legitimate value in the lisp environment.  Duplicate
+items within the BAG are supported; calling \(ADD NIL\) three times
+yields a BAG with \(at least\) three NIL items."
   (declare (inline %bag-hash %bag-size))
   (let ((table (%bag-hash bag)))
-    (multiple-value-bind (place found) (gethash value table)
+    (multiple-value-bind (value found) (gethash item table)
       (if found
-	  (incf (car place))
-	  (setf (gethash value table) (cons 1 nil)))))
+	  (incf (car value))
+	  (setf (gethash item table) (cons 1 nil)))))
   (incf (%bag-size bag))
   bag)
 
-(defun bagp (thing)
-  "Returns T if THING is a BAG, otherwise NIL."
-  (declare (inline %bag-p))
-  (%bag-p thing))
+;; As we're using hash tables in our implementation, there isn't an
+;; actually useful distinction of "deep" or "shallow" copies of a bag.
 
 (defun copy (bag)
-  "Returns a new bag that is a copy of the supplied BAG.  The actual
-items seen by the original and the returned bags may be shared, while
-the counts \(how many times an item has been seen\) are unique to each
-bag.  There's no useful definition of \"shallow\" or \"deep\" copies
-of this implementation of a bag."
-  (let* ((baghash (%bag-hash bag))
-	 (newhash (make-hash-table :test (hash-table-test baghash))))
+  "Returns a new bag that is a copy of the supplied BAG."
+  (let* ((oldhash (%bag-hash bag))
+	 (newhash (make-hash-table :test (hash-table-test oldhash)
+				   :size (hash-table-size oldhash))))
     (maphash #'(lambda (k v) (setf (gethash k newhash) (cons (car v) nil)))
-	     baghash)
+	     oldhash)
     (%bag-make :hash newhash :size (%bag-size bag))))
 
 (defun map (bag function)
   "For every item in the BAG, call the supplied FUNCTION designator
-with that value as an argument.  The return value of FUNCTION is
-considered a generalized boolean.  MAPFUN continues callng FUNCTION
-once for every value in the bag \(including duplicate values\), unless
-FUNCTION returns a false value.  MAPFUN returns T if FUNCTION never
-returned false and the entire bag was traversed; otherwise NIL."
+with that item as its sole argument.  The return value of FUNCTION is
+considered as a generalized boolean.  MAP continues callng FUNCTION
+once for every item in the bag \(including duplicate items\), unless
+FUNCTION returns a false value.  On a false return from FUNCTION, MAP
+stops and returns NIL.  Otherwise, all items in the bag are seen by
+FUNCTION and MAP returns T."
   (declare (inline %bag-hash))
   (maphash #'(lambda (k v)
 	       (dotimes (i (car v))
@@ -150,22 +158,5 @@ returned false and the entire bag was traversed; otherwise NIL."
 		   (return-from map nil))))
 	   (%bag-hash bag))
   t)
-
-(defun hasp (bag value)
-  "Returns T if VALUE appears at least once in the supplied BAG;
-otherwise, returns NIL."
-  (declare (inline %bag-hash))
-  (multiple-value-bind (v s)
-      (gethash value (%bag-hash bag))
-    (declare (ignore v))
-    (and s t)))
-
-(defun count (bag value)
-  "Returns the number of times that VALUE has been seen in the
-supplied BAG."
-  (declare (inline %bag-hash))
-  (multiple-value-bind (v s)
-      (gethash value (%bag-hash bag))
-    (or (and s (car v)) 0)))
 
 (declaim (notinline %bag-make %bagp %bag-head %bag-size))
