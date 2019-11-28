@@ -22,15 +22,16 @@
 ;;;
 ;;; However, one annoying "glitch" in the hash table specification of
 ;;; Common Lisp is that there are patterns where GETHASH is called
-;;; twice for the same key in succession.  For example, one often must
-;;; call GETHASH to look up a value, and then call it again when
+;;; twice for the same key in succession.  For example, sometimes one
+;;; must call GETHASH to look up a value, and then call it again when
 ;;; updating that value.  It would be helpful to somehow cache that
 ;;; lookup so that the update can reuse it without recomputing the
 ;;; hash.  (Aside: this is exactly what SBCL does; it hides a fun hack
 ;;; where the last GETHASH is cached, and if a new GETHASH uses a key
 ;;; that is EQ to the last key, the cached return is used again.  But,
 ;;; obviously, this is unique to SBCL, and it only works for the most
-;;; recent lookup.)
+;;; recent lookup. I also don't know how (if at all) this plays with
+;;; multithreaded apps).
 ;;;
 ;;; Extended hash table API, like SBCL's, are common among different
 ;;; lisp implementations; none of them are standard, however.  So,
