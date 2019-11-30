@@ -5,8 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="generator" content="Asciidoctor 2.0.10">
-<meta name="author" content="Bob Krzaczek">
-<title>Accretions</title>
+<title>Accretions License</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:300,300italic,400,400italic,600,600italic%7CNoto+Serif:400,400italic,700,700italic%7CDroid+Sans+Mono:400,700">
 <style>
 /* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -436,162 +435,12 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
 #footer-text{color:rgba(0,0,0,.6);font-size:.9em}}
 @media amzn-kf8{#header,#content,#footnotes,#footer{padding:0}}
 </style>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
 </head>
 <body class="article">
 <div id="header">
-<h1>Accretions</h1>
-<div class="details">
-<span id="author" class="author">Bob Krzaczek</span><br>
-<span id="email" class="email"><a href="mailto:robert.krzaczek@gmail.com">robert.krzaczek@gmail.com</a></span><br>
-<span id="revnumber">version 0.1.0,</span>
-<span id="revdate">November 2019</span>
-<br><span id="revremark">Dostać kota.</span>
-</div>
+<h1>Accretions License</h1>
 </div>
 <div id="content">
-<div id="preamble">
-<div class="sectionbody">
-<div class="paragraph">
-<p><a href="https://krz8.github.io/accretions">Home</a>&#8201;&#8212;&#8201;<a href="https://krz8.github.io/accretions/doc/manual">Manual</a>&#8201;&#8212;&#8201;<a href="https://github.com/krz8/accretions/issues">Issues</a></p>
-</div>
-<div class="paragraph">
-<p>Accretions is a collection of data structures that aren&#8217;t present in
-standard Common Lisp.
-Of course, we already have lists, and most CL implementations have
-performant hash tables, yet there remain other data structures
-essential to certain applications that are missing from the standard.
-Accretions is my collection of good (or, at least useful)
-implementations of them.
-If I&#8217;ve needed it more than once, and the code is good enough, here is
-where it winds up.
-<sup class="footnote">[<a id="_footnoteref_1" class="footnote" href="#_footnotedef_1" title="View footnote.">1</a>]</sup></p>
-</div>
-<div class="paragraph">
-<p>Accretions would not exist without the essential work of Donald Knuth,
-Robert Sedgewick, Jon Bentley, Doug Hoyte, and others.</p>
-</div>
-<div class="paragraph">
-<p>Certainly, Accretions isn&#8217;t alone in its implementations.
-With the slightly possible exception of ternary search trees,
-everything in here must already exist, scattered somewhere on the
-web.
-<sup class="footnote">[<a id="_footnoteref_2" class="footnote" href="#_footnotedef_2" title="View footnote.">2</a>]</sup>
-Performance isn&#8217;t always discussed, however, and it&#8217;s never clear how
-tight or loose the code is.
-Here, each algorithm or container comes with at least <em>some</em> analysis
-of how well it&#8217;s likely to perform in practice.
-It hopes to be a little faster, maybe a little more efficient, and
-maybe a little more consistent than other implementations out there.</p>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_functionality"><a class="link" href="#_functionality">Functionality</a></h2>
-<div class="sectionbody">
-<div class="sect2">
-<h3 id="_what_you_get_now"><a class="link" href="#_what_you_get_now">What You Get Now</a></h3>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Bags</dt>
-<dd>
-<p>Also known as Multisets, these are simple unordered collections
-of items.</p>
-</dd>
-<dt class="hdlist1">Ternary Search Trees</dt>
-<dd>
-<p>A really nice collection filling the space somewhere between hash
-tables and tries; great for dictionaries!
-The Accretions implementation allows for any key sequence, not just
-strings.
-It provides the functionality of a trie without the unfortunate space
-overhead.
-<sup class="footnote">[<a id="_footnoteref_3" class="footnote" href="#_footnotedef_3" title="View footnote.">3</a>]</sup></p>
-</dd>
-<dt class="hdlist1">Red-Black Trees</dt>
-<dd>
-<p>Notes on 2-3 and red-black go here.</p>
-</dd>
-<dt class="hdlist1">Hash Tables</dt>
-<dd>
-<p>The Common Lisp standard is built around a <strong>sxhash</strong>
-function that cannot be replaced and a fixnum-based hash space.
-Accretions offers a hash table implementation that allows for updating
-hash algorithms, evaluating alternate algorithms (<em>e.g.,</em> Murmur,
-CityHash, FarmHash) as well as functions provided by the client.</p>
-</dd>
-</dl>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_what_you_need"><a class="link" href="#_what_you_need">What You Need</a></h3>
-<div class="dlist">
-<dl>
-<dt class="hdlist1">Strictly speaking?</dt>
-<dd>
-<p>Nothing.
-Individual lisp files can be compiled or evaluated as you need.
-Accretions is written to the Common Lisp specification, and relies on
-no external systems or packages in its source.</p>
-</dd>
-<dt class="hdlist1">Loosely speaking?</dt>
-<dd>
-<p>If you want to use the <strong>asd</strong> system definitions that come with Accretions,
-you&#8217;ll need ASDF 3.1.2 or later (along with associated systems like UIOP).
-This should be no problem, every major lisp environment is already
-including even later versions ASDF, and has been for years.</p>
-</dd>
-<dt class="hdlist1">Very loosely speaking?</dt>
-<dd>
-<p>If you want to run the tests that are packaged in Accretions, then you&#8217;ll
-need the <a href="https://github.com/sionescu/fiveam">FiveAM</a> test framework.
-It&#8217;s available via <a href="https://www.quicklisp.org/beta/">Quicklisp</a>, so if you have that, <a href="https://github.com/sionescu/fiveam">FiveAM</a> is but a
-<strong>quickload</strong> away.</p>
-</dd>
-</dl>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_what_you_will_get_in_the_future"><a class="link" href="#_what_you_will_get_in_the_future">What You Will Get in the Future</a></h3>
-<div class="dlist">
-<dl>
-<dt class="hdlist1"><a href="https://www.quicklisp.org/beta/">Quicklisp</a></dt>
-<dd>
-<p>I&#8217;ll submit this for packaging via <a href="https://www.quicklisp.org/beta/">Quicklisp</a> once I feel
-it&#8217;s good enough.</p>
-</dd>
-<dt class="hdlist1">More Containers</dt>
-<dd>
-<p>Or more algorithms? Feel free to suggest something!</p>
-</dd>
-</dl>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_what_you_probably_wont_get"><a class="link" href="#_what_you_probably_wont_get">What You Probably Won&#8217;t Get</a></h3>
-<div class="paragraph">
-<p>I&#8217;ve experimented with functional data structures (as described by
-Osazaki) and it&#8217;s true, they have very promising characteristics in
-persistence and safety.
-However, their (albiet temporary) overhead in space can be prohibitive
-for larger applications, and so I&#8217;ll revisit this another time if I
-can.
-Especially, I encountered some <em>very</em> interesting approaches,
-including treating data as streams instead of contiguous blobs of
-memory that really bear further investigation.</p>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_next_step"><a class="link" href="#_next_step">Next Step</a></h3>
-<div class="paragraph">
-<p>Okay, so go hit the <a href="https://krz8.github.io/accretions/doc/manual">Manual</a>!</p>
-</div>
-</div>
-</div>
-</div>
-<div class="sect1">
-<h2 id="_accretions_license"><a class="link" href="#_accretions_license">Accretions License</a></h2>
-<div class="sectionbody">
 <div class="paragraph">
 <p>Accretions is available under the
 <a href="https://opensource.org/licenses/MIT">MIT Open Source License</a>.</p>
@@ -623,24 +472,9 @@ tort or otherwise, arising from, out of or in connection with the
 software or the use or other dealings in the software.</strong></p>
 </div>
 </div>
-</div>
-</div>
-<div id="footnotes">
-<hr>
-<div class="footnote" id="_footnotedef_1">
-<a href="#_footnoteref_1">1</a>. Yes, I&#8217;m through re-implementing these wheels from scratch, over and over&#8230;&#8203;
-</div>
-<div class="footnote" id="_footnotedef_2">
-<a href="#_footnoteref_2">2</a>. No, I haven&#8217;t checked personally.
-</div>
-<div class="footnote" id="_footnotedef_3">
-<a href="#_footnoteref_3">3</a>. Especially in this age of Unicode.
-</div>
-</div>
 <div id="footer">
 <div id="footer-text">
-Version 0.1.0<br>
-Last updated 2019-11-30 17:05:40 -0500
+Last updated 2019-11-28 22:15:34 -0500
 </div>
 </div>
 </body>

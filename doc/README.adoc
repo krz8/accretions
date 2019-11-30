@@ -17,9 +17,8 @@ v0.1.0, November 2019: Dostać kota.
 Accretions is a collection of data structures that aren't present in
 standard Common Lisp.
 Of course, we already have lists, and most CL implementations have
-performant hash tables.
-But there remain other data structures essential to certain
-applications that are missing from the standard.
+performant hash tables, yet there remain other data structures
+essential to certain applications that are missing from the standard.
 Accretions is my collection of good (or, at least useful)
 implementations of them.
 If I've needed it more than once, and the code is good enough, here is
@@ -35,8 +34,8 @@ With the slightly possible exception of ternary search trees,
 everything in here must already exist, scattered somewhere on the
 web.
 footnote:[No, I haven't checked personally.]
-But performance isn't always discussed, and it's never clear how tight
-or loose the code is.
+Performance isn't always discussed, however, and it's never clear how
+tight or loose the code is.
 Here, each algorithm or container comes with at least _some_ analysis
 of how well it's likely to perform in practice.
 It hopes to be a little faster, maybe a little more efficient, and
@@ -109,4 +108,4 @@ memory that really bear further investigation.
 
 Okay, so go hit the {manual}!
 
-include::doc/license.adoc[leveloffset=+1]
+include::LICENSE.adoc[leveloffset=+1]
