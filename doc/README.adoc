@@ -5,12 +5,9 @@ v0.1.0, November 2019: Dostać kota.
 :icons: font
 :sectlinks: t
 
-:url-home: https://krz8.github.io/accretions
-:url-manual: {url-home}/doc/manual
-:url-issues: https://github.com/krz8/accretions/issues
-:home: {url-home}[Home]
-:manual: {url-manual}[Manual]
-:issues: {url-issues}[Issues]
+:home: https://krz8.github.io/accretions/README[Home]
+:manual: https://krz8.github.io/accretions/doc/manual[Manual]
+:issues: https://github.com/krz8/accretions/issues[Issues]
 
 {home} -- {manual} -- {issues}
 
