@@ -4,7 +4,6 @@ Bob Krzaczek <robert.krzaczek@gmail.com>
 v0.1.0, November 2019: Dostać kota.
 :icons: font
 :sectlinks: t
-:safe: unsafe
 
 :url-home: https://krz8.github.io/accretions
 :url-manual: {url-home}/doc/manual
