@@ -1,5 +1,20 @@
 Accretions License
 ==================
+Bob Krzaczek <robert.krzaczek@gmail.com>
+v0.1.0, November 2019: Dostać kota.
+:icons: font
+:sectlinks: t
+:sectnum: t
+
+:home: https://krz8.github.io/accretions/README[Home]
+:manual: https://krz8.github.io/accretions/doc/manual[Manual]
+:issues: https://github.com/krz8/accretions/issues[Issues]
+
+{home} -- {manual} -- {issues}
+
+
+Accretions License
+------------------
 
 Accretions is available under the
 https://opensource.org/licenses/MIT[MIT Open Source License].
@@ -25,4 +40,3 @@ In no event shall the authors or copyright holders be liable for any
 claim, damages or other liability, whether in an action of contract,
 tort or otherwise, arising from, out of or in connection with the
 software or the use or other dealings in the software.**
-

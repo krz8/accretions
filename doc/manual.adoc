@@ -5,13 +5,10 @@ v0.1.0, November 2019: Dostać kota.
 :icons: font
 :sectlinks: t
 :sectnum: t
+:licensep: t
 
-:home: https://krz8.github.io/accretions/README[Home]
-:manual: https://krz8.github.io/accretions/doc/manual[Manual]
-:issues: https://github.com/krz8/accretions/issues[Issues]
+include::header.adoc[]
 
-{home} -- {manual} -- {issues}
+include::bag.adoc[leveloffset=+1]
 
-This is the manual.  Boom.
-
-include::LICENSE.adoc[leveloffset=+1]
+include::license.adoc[leveloffset=+1]

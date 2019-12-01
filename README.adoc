@@ -5,7 +5,7 @@ v0.1.0, November 2019: Dostać kota.
 :icons: font
 :sectlinks: t
 
-:home: https://krz8.github.io/accretions/README[Home]
+:home: https://github.com/krz8/accretions[Home]
 :manual: https://krz8.github.io/accretions/doc/manual[Manual]
 :issues: https://github.com/krz8/accretions/issues[Issues]
 
@@ -38,27 +38,7 @@ of how well it's likely to perform in practice.
 It hopes to be a little faster, maybe a little more efficient, and
 maybe a little more consistent than other implementations out there.
 
-
 == Functionality
-
-=== What You Get Now
-
-Bags:: Also known as Multisets, these are simple unordered collections
-  of items.
-Ternary Search Trees::
-  A really nice collection filling the space somewhere between hash
-  tables and tries; great for dictionaries!
-  The Accretions implementation allows for any key sequence, not just
-  strings.
-  It provides the functionality of a trie without the unfortunate space
-  overhead.
-  footnote:[Especially in this age of Unicode.]
-Red-Black Trees:: Notes on 2-3 and red-black go here.
-Hash Tables:: The Common Lisp standard is built around a *sxhash*
-  function that cannot be replaced and a fixnum-based hash space.
-  Accretions offers a hash table implementation that allows for updating
-  hash algorithms, evaluating alternate algorithms (_e.g.,_ Murmur,
-  CityHash, FarmHash) as well as functions provided by the client.
 
 === What You Need
 
@@ -83,7 +63,26 @@ need the {fiveam} test framework.
 It's available via {quicklisp}, so if you have that, {fiveam} is but a
 **quickload** away.
 
-=== What You Will Get in the Future
+=== What You Get Now
+
+Bags:: Also known as Multisets, these are simple unordered collections
+  of items.
+Ternary Search Trees::
+  A really nice collection filling the space somewhere between hash
+  tables and tries; great for dictionaries!
+  The Accretions implementation allows for any key sequence, not just
+  strings.
+  It provides the functionality of a trie without the unfortunate space
+  overhead.
+  footnote:[Especially in this age of Unicode.]
+Red-Black Trees:: Notes on 2-3 and red-black go here.
+Hash Tables:: The Common Lisp standard is built around a *sxhash*
+  function that cannot be replaced and a fixnum-based hash space.
+  Accretions offers a hash table implementation that allows for updating
+  hash algorithms, evaluating alternate algorithms (_e.g.,_ Murmur,
+  CityHash, FarmHash) as well as functions provided by the client.
+
+=== What You Get in the Future
 
 {quicklisp}:: I'll submit this for packaging via {quicklisp} once I feel
   it's good enough.
@@ -105,4 +104,30 @@ memory that really bear further investigation.
 
 Okay, so go hit the {manual}!
 
-include::LICENSE.adoc[leveloffset=+1]
+Accretions License
+------------------
+
+Accretions is available under the
+https://opensource.org/licenses/MIT[MIT Open Source License].
+
+Copyright © 2018, 2019 Robert S. Krzaczek
+
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+“Software”), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+
+**The software is provided “as is”, without warranty of any kind,
+express or implied, including but not limited to the warranties of
+merchantability, fitness for a particular purpose and
+noninfringement.
+In no event shall the authors or copyright holders be liable for any
+claim, damages or other liability, whether in an action of contract,
+tort or otherwise, arising from, out of or in connection with the
+software or the use or other dealings in the software.**

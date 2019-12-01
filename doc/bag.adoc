@@ -1,0 +1,21 @@
+Accretions Bag Manual
+=====================
+:icons: font
+:sectlinks: t
+:sectnum: t
+
+include::header.adoc[]
+
+A Bag Section
+-------------
+
+Foo.
+
+
+Another Bag Section
+-------------------
+
+Bar.
+
+
+include::license.adoc[leveloffset=+1]

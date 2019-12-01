@@ -1,0 +1,6 @@
+:home: https://github.com/krz8/accretions[Home]
+:manual: https://krz8.github.io/accretions/doc/manual[Manual]
+:issues: https://github.com/krz8/accretions/issues[Issues]
+
+{home} -- {manual} -- {issues}
+
