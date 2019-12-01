@@ -1,10 +1,12 @@
 Accretions Bag Manual
 =====================
+ifeval::["{docname}" == "bag"]
 :icons: font
 :sectlinks: t
 :sectnum: t
 
 include::header.adoc[]
+endif::[]
 
 A Bag Section
 -------------
@@ -18,4 +20,6 @@ Another Bag Section
 Bar.
 
 
+ifeval::["{docname}" == "bag"]
 include::license.adoc[leveloffset=+1]
+endif::[]

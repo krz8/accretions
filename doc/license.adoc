@@ -1,20 +1,12 @@
 Accretions License
 ==================
+ifeval::["{docname}" == "license"]
 Bob Krzaczek <robert.krzaczek@gmail.com>
 v0.1.0, November 2019: Dostać kota.
 :icons: font
-:sectlinks: t
-:sectnum: t
 
-:home: https://krz8.github.io/accretions/README[Home]
-:manual: https://krz8.github.io/accretions/doc/manual[Manual]
-:issues: https://github.com/krz8/accretions/issues[Issues]
-
-{home} -- {manual} -- {issues}
-
-
-Accretions License
-------------------
+include::header.adoc[]
+endif::[]
 
 Accretions is available under the
 https://opensource.org/licenses/MIT[MIT Open Source License].
