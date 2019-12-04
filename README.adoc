@@ -5,6 +5,11 @@ v0.1.0, November 2019: Dostać kota.
 :icons: font
 :sectlinks: t
 
+// Remember, unlike the files in doc/ which we spin into html
+// ourselves, this file is handled by github, which has yet to allow
+// file inclusion and other nice hacks.  Therefore, it must be
+// self-contained and relatively simple.
+
 :home: https://github.com/krz8/accretions[Home]
 :manual: https://krz8.github.io/accretions/doc/manual[Manual]
 :issues: https://github.com/krz8/accretions/issues[Issues]
@@ -93,7 +98,7 @@ More Containers:: Or more algorithms? Feel free to suggest something!
 I've experimented with functional data structures (as described by
 Osazaki) and it's true, they have very promising characteristics in
 persistence and safety.
-However, their (albiet temporary) overhead in space can be prohibitive
+However, their overhead in space (albiet temporary) can be prohibitive
 for larger applications, and so I'll revisit this another time if I
 can.
 Especially, I encountered some _very_ interesting approaches,
