@@ -2,8 +2,6 @@ Accretions
 ==========
 Bob Krzaczek <robert.krzaczek@gmail.com>
 v0.1.0, November 2019: Dostać kota.
-:icons: font
-:sectlinks: t
 
 // Remember, unlike the files in doc/ which we spin into html
 // ourselves, this file is handled by github, which has yet to allow
@@ -38,40 +36,42 @@ web.
 footnote:[No, I haven't checked personally.]
 Performance isn't always discussed, however, and it's never clear how
 tight or loose the code is.
-Here, each algorithm or container comes with at least _some_ analysis
-of how well it's likely to perform in practice.
+Here in Accretions, each algorithm or container comes with at least
+_some_ analysis of how well it's likely to perform in practice.
 It hopes to be a little faster, maybe a little more efficient, and
 maybe a little more consistent than other implementations out there.
 
-== Functionality
 
-=== What You Need
+== What You Need
 
 :quicklisp: https://www.quicklisp.org/beta/[Quicklisp]
 :fiveam: https://github.com/sionescu/fiveam[FiveAM]
 
 Strictly speaking?::
-Nothing.
-Individual lisp files can be compiled or evaluated as you need.
-Accretions is written to the Common Lisp specification, and relies on
-no external systems or packages in its source.
+  Nothing.
+  Individual lisp files can be compiled or evaluated as you need.
+  Accretions is written to the Common Lisp specification, and relies on
+  no external systems or packages in its source.
 
 Loosely speaking?::
-If you want to use the *asd* system definitions that come with Accretions,
-you'll need ASDF 3.1.2 or later (along with associated systems like UIOP).
-This should be no problem, every major lisp environment is already
-including even later versions ASDF, and has been for years.
+  If you want to use the *asd* system definitions that come with Accretions
+  (of course you do), you'll need ASDF 3.1.2 or later (along with
+  associated systems like UIOP).
+  This should be no problem, every major lisp environment is already
+  including even later versions ASDF, and has been for years.
 
 Very loosely speaking?::
-If you want to run the tests that are packaged in Accretions, then you'll
-need the {fiveam} test framework.
-It's available via {quicklisp}, so if you have that, {fiveam} is but a
-**quickload** away.
+  If you want to run the tests that are packaged in Accretions, then you'll
+  need the {fiveam} test framework.
+  It's available via {quicklisp}, so if you have that, {fiveam} is but a
+  **quickload** away.
 
-=== What You Get Now
 
-Bags:: Also known as Multisets, these are simple unordered collections
-  of items.
+== What You Get Now
+
+Bags::
+  Also known as Multisets, these are simple unordered collections of items.
+
 Ternary Search Trees::
   A really nice collection filling the space somewhere between hash
   tables and tries; great for dictionaries!
@@ -80,24 +80,34 @@ Ternary Search Trees::
   It provides the functionality of a trie without the unfortunate space
   overhead.
   footnote:[Especially in this age of Unicode.]
-Red-Black Trees:: Notes on 2-3 and red-black go here.
-Hash Tables:: The Common Lisp standard is built around a *sxhash*
-  function that cannot be replaced and a fixnum-based hash space.
+
+Red-Black Trees::
+  Notes on 2-3 and red-black go here.
+
+Hash Tables::
+  The Common Lisp standard is built around a *sxhash* function that cannot
+  be replaced and a fixnum-based hash space.
   Accretions offers a hash table implementation that allows for updating
   hash algorithms, evaluating alternate algorithms (_e.g.,_ Murmur,
   CityHash, FarmHash) as well as functions provided by the client.
 
-=== What You Get in the Future
 
-{quicklisp}:: I'll submit this for packaging via {quicklisp} once I feel
+== What You Get in the Future
+
+{quicklisp}::
+  I'll submit this for distribution via {quicklisp} once I feel
   it's good enough.
-More Containers:: Or more algorithms? Feel free to suggest something!
 
-=== What You Probably Won't Get
+More Containers::
+  Or more algorithms? Feel free to suggest something!
+
+
+== What You Probably Won't Get
 
 I've experimented with functional data structures (as described by
 Osazaki) and it's true, they have very promising characteristics in
 persistence and safety.
+I really like them for that.
 However, their overhead in space (albiet temporary) can be prohibitive
 for larger applications, and so I'll revisit this another time if I
 can.
@@ -105,9 +115,11 @@ Especially, I encountered some _very_ interesting approaches,
 including treating data as streams instead of contiguous blobs of
 memory that really bear further investigation.
 
-=== Next Step
+== Next Step
 
 Okay, so go hit the {manual}!
+
+
 
 Accretions License
 ------------------
