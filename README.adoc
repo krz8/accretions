@@ -61,10 +61,10 @@ Loosely speaking?::
   including even later versions ASDF, and has been for years.
 
 Very loosely speaking?::
-  If you want to run the tests that are packaged in Accretions, then you'll
-  need the {fiveam} test framework.
-  It's available via {quicklisp}, so if you have that, {fiveam} is but a
-  **quickload** away.
+  If you want to run the tests that are packaged in Accretions, then
+  you'll need the {fiveam} test framework.
+  It's available via {quicklisp}, so if you have that, {fiveam} is but
+  a **quickload** away.
 
 
 == What You Get Now
@@ -85,8 +85,11 @@ Red-Black Trees::
   Notes on 2-3 and red-black go here.
 
 Hash Tables::
-  The Common Lisp standard is built around a *sxhash* function that cannot
-  be replaced and a fixnum-based hash space.
+  The Common Lisp standard is built around an implementation-provided
+  *sxhash* function that cannot be replaced
+  footnote:[Well, okay, some implementations allow you to supply a
+  hash function of your choice, but it's not as common as you'd hope.]
+  and a hash space built around it using fixnums and lists.
   Accretions offers a hash table implementation that allows for updating
   hash algorithms, evaluating alternate algorithms (_e.g.,_ Murmur,
   CityHash, FarmHash) as well as functions provided by the client.
