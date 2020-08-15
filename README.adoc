@@ -8,6 +8,8 @@ v0.1.0, November 2019: Dostać kota.
 // file inclusion and other nice hacks.  Therefore, it must be
 // self-contained and relatively simple.
 
+OLD OLD OLD OLD OLD rewrite in progress
+
 :home: https://github.com/krz8/accretions[Home]
 :manual: https://krz8.github.io/accretions/doc/manual[Manual]
 :issues: https://github.com/krz8/accretions/issues[Issues]
