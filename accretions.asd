@@ -16,21 +16,23 @@ everywhere by portable software.  Accretions seeks to address that
 situation, providing solid implementations of these data structures
 and their related algorithms."
 
+  ;; ugh. wtf is this. rewrite.
+
   ;; This might seem out of place; it's not.  :accretions/all mentions
   ;; the packages that will be exported, in one way or another, from
   ;; the Accretions package.  However, Accretions itself is really
   ;; just a set of small packages providing implementations and one
   ;; relatively simple CLOS implementation sitting on top. It's
   ;; important, however, that the symbols in those standalone
-  ;; packages, like spv, are NOT exported from the Accretions package
+  ;; packages, like sparse-vector, are NOT exported from the Accretions package
   ;; itself.  These strict packaging rules ensure that end users may
   ;; choose to use the low-level functionality directly, or they may
   ;; use the high-level CLOS functionality, but not get stuck in
   ;; shadowed symbol hell.
   ;;
   ;; Therefore, Accretions itself is built up via all.lisp.  That
-  ;; package, in turn, expects that others (e.g., spv.lisp) is already
-  ;; available in the Lisp environment.  Thus, we list spv.lisp here
+  ;; package, in turn, expects that others (e.g., sparse-vector.lisp) is already
+  ;; available in the Lisp environment.  Thus, we list sparse-vector.lisp here
   ;; as a dependency, and leave all.lisp to assume bag and friends are
   ;; already in place when it assembles the main package.
   ;;
@@ -44,7 +46,7 @@ and their related algorithms."
   
   :class :package-inferred-system
   :defsystem-depends-on (:asdf-package-system) 
-  :depends-on (:accretions/spv :accretions/all)
+  :depends-on (:accretions/sparse-vector :accretions/all)
 
   :in-order-to ((test-op (test-op :accretions/test/all))))
 
