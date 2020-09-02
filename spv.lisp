@@ -9,72 +9,72 @@
 
 (defpackage :accretions/spv
   (:use #:cl)
-  (:export #:sparse-vector #:make-sparse-vector #:spvref))
+  (:export #:*error* #:sparse-vector #:make-sparse-vector #:make-spv
+	   #:spvref))
 (in-package :accretions/spv)
 
 (defparameter *error* *error-output*
-  "Names a stream that errors are sent to in the SPARSE-VECTOR
-  package.  Functions in this package tend to return NIL on error, and
-  an error message is sent to the stream named by *ERROR* \(the
-  standard *ERROR-OUTPUT* stream is default\).  When *ERROR* is NIL, a
-  string describing the error is returned by the function detecting
-  the error.  Manipulating *ERROR* does not change the meaning of the
-  secondary success value returned by functions in this package.")
+  "Names a stream to which descriptions of errors in the SPARSE-VECTOR
+  package are sent.  When NIL, no error messages are generated.")
 
-(defclass sparse-vector ()
-  ((size :initarg :size
-	 :type unsigned-byte
-	 :initform 0
-	 :documentation "The total number of elements represented by
-	 this SPARSE-VECTOR.  Unlike traditional vectors, this value
-	 may be larger than MOST-POSITIVE-FIXNUM.")
-   (default :initarg :default
-            :documentation "Every element in this SPARSE-VECTOR is
-            implied to start with this value.  Unless explicitly
-            initialized, this slot is set to zero when the ELTYPE slot
-            is some sort of NUMBER, otherwise it is set to NIL.")
-   (slicesz :initarg :slicesz
-	    :type fixnum
-	    :documentation "Each slice of the SPARSE-VECTOR contains
-	    this many elements \(except the last slice, which contains
-	    up to this many elements\).  With care, this value can
-	    \"tune\" the granularity of the SPARSE-VECTOR.")
-   (eltype :initarg :eltype
-	   :documentation "Declares the types of the elements of this
-	   SPARSE-VECTOR.  This can be T for a SPARSE-VECTOR of
-	   indeterminate or \"any\" type, or it can be something
-	   specific \(e.g., DOUBLE-FLOAT\) which may help with the
-	   efficiency of the SPARSE-VECTOR.")
-   (slices :type simple-vector
-	   :documentation "Each element of this vector is, itself, a
-	   vector of elements makng up one slice of the
-	   SPARSE-VECTOR."))
-  (:default-initargs :slicesz 1024 :eltype t)
-  (:documentation "Sparse vectors can be implemented in a variety of
-  ways, including lists, hashes, and tables.  Each has tradeoffs in
-  computation and space.  This implementation uses a less common
-  approach involving subvectors, here called \"slices\".  The sparse
-  vector is divided into slices, each containing SLICESZ elements of
-  the conceptual sparse vector.  The advantage is that both reading
-  and writing is provided in constant time, involving two array
-  accesses \(via SVREF\) per call.  The disadvantage is space, with
-  the pathological case being a client that writes one value to each
-  slice of the sparse vector, resulting in the instantiation of all
-  slices.  For that reason, this implementation of sparse vectors is
-  best suited for clients that will work with relatively localized
-  elements."))
+(defun err (nvals &rest args)
+  "Mostly just a wrapper around FORMAT, except that setting *ERROR* to
+NIL won't generate a string, but instead is the way to muzzle errors
+in here.  Returns NVALS multiple values, all NIL."
+  (when *error*
+    (write-sequence "SPARSE-VECTOR Error: " *error*)
+    (apply #'format *error* args))
+  (apply #'values (make-list nvals)))
 
-(defmethod initialize-instance :after
-    ((spv sparse-vector) &rest initargs)
-  "Complete the initialization of a SPARSE-VECTOR, based on the
-initialization arguments already processed.  This method can signal
-TYPE-ERROR conditions.  In addition to completing the initializations,
-this function also checks a number of types and bounds, ensuring that
-the instantiated SPARSE-VECTOR is sane and safe.  The SPVREF and
-similar functions, then, can safely make a number of assumptions about
-the SPARSE-VECTOR, supporting optimizations and faster code.
+(defstruct (sparse-vector (:conc-name spv-) (:constructor %make-spv)
+			  (:predicate spvp))
+  "Sparse vectors can be implemented in a variety of ways, including
+lists, hashes, and tables.  Each has tradeoffs in computation and
+space.  This implementation uses a less common approach involving
+subvectors, here called \"slices\".  The sparse vector is divided into
+slices, each containing SLICESZ elements of the conceptual sparse
+vector.  The advantage is that both reading and writing is provided in
+constant time, involving two array accesses \(via SVREF\) per call.
+The disadvantage is space, with the pathological case being a client
+that writes one value to each slice of the sparse vector, resulting in
+the instantiation of all slices.  For that reason, this implementation
+of sparse vectors is best suited for clients that will work with
+relatively localized elements through the sparse vector, or just plain
+very sparse elements."
+  ;; The total number of elements represented by this SPARSE-VECTOR.
+  ;; Unlike traditional vectors, this value may be larger than
+  ;; MOST-POSITIVE-FIXNUM.
+  (size 1 :type (integer 1 *))
+  ;; Every element in this SPARSE-VECTOR is implied to start with this
+  ;; value.  Unless explicitly initialized, this slot is set to zero
+  ;; when the ELTYPE slot is some sort of NUMBER, otherwise it is set
+  ;; to NIL.
+  default
+  ;; Each slice of the SPARSE-VECTOR contains this many elements
+  ;; (except the last slice, which contains up to this many elements).
+  ;; With care, this value can "tune" the granularity of the
+  ;; SPARSE-VECTOR.
+  (slicesz 0 :type fixnum)
+  ;; Declares the types of the elements of this SPARSE-VECTOR.  This
+  ;; can be T for a SPARSE-VECTOR of indeterminate or "any" elements,
+  ;; or it can be something specific (e.g., DOUBLE-FLOAT) which may
+  ;; help with the efficiency of the SPARSE-VECTOR.
+  (eltype t)
+  ;; Each element of this vector is, itself, a vector of elements
+  ;; makng up one slice of the SPARSE-VECTOR.
+  (slices nil :type simple-vector))
 
-The initializations completed here are:
+(defun make-sparse-vector (size &key (eltype t) (slicesz 1024)
+			   (default nil defaultp))
+  "Creates and initializes a new SPARSE-VECTOR, returning it on
+success, or NIL on error.  This function also checks a number of types
+and bounds, ensuring that the instantiated SPARSE-VECTOR is sane and
+safe.  The SPVREF and similar functions, then, can safely make a
+number of assumptions about the SPARSE-VECTOR, supporting
+optimizations and faster code.
+
+In addition to the expected initializations, extra steps taken here
+include:
 . Unless a :DEFAULT element value was explicitly provided for
   the SPARSE-VECTOR, make the default element value zero if the
   element type specified via :ELTYPE was a NUMBER, otherwise NIL.
@@ -85,51 +85,61 @@ The initializations completed here are:
   that the top level vector is indexed by a fixnum.
 . Ensure that the default value has a type that matches ELTYPE.
 . Create the top level vector of slices."
-  (declare (ignore initargs))
-  (with-slots (size eltype slicesz slices default) spv
-    (unless (slot-boundp spv 'default)
-      (setf default (and (subtypep eltype 'number) (coerce 0 eltype))))
-    (cond
-      ((or (not (integerp size)) (not (plusp size)))
-       (format *error* "The SIZE of a SPARSE-VECTOR must be a ~
-                        positive integer, not ~W." size)
-       (values nil nil))
-      ((or (not (typep slicesz 'fixnum)) (not (plusp slicesz)))
-       (format *error* "The SLICESZ of a SPARSE-VECTOR must be a ~
-                        positive fixnum, not ~W." size)
-       (values nil nil)))
-    ;; This works, but not all users will recognize (integer 1 *) so
-    ;; it's better to explicitly test the two conditions below.
-    ;; (check-type size (integer 1 *) "a positive integer")
-    (unless (typep default eltype)
-      (error 'type-error "DEFAULT element value is not of type ELTYPE"
-	     :datum default))
-    (let ((nslices (ceiling size slicesz)))
-      (if (<= nslices most-positive-fixnum)
-	  (setf slices (make-array nslices :initial-element nil))
-	  (error 'type-error "SLICESZ is too small for the given SIZE"
-		 :datum slicesz)))))
+  (cond
+    ((or (not (integerp size)) (not (plusp size)))
+     (err 1 "The SIZE of a SPARSE-VECTOR cannot be ~W, it must be a ~
+             positive integer." size))
+    ((or (not (typep slicesz 'fixnum)) (not (plusp slicesz)))
+     (err 1 "The SLICESZ of a SPARSE-VECTOR cannot be ~W, it must be ~
+             a positive fixnum." slicesz))
+    ((not (typep default eltype))
+     (err 1 "The DEFAULT element value of a SPARSE-VECTOR must be of ~
+             type ELTYPE."))
+    (t
+     (let ((nslices (ceiling size slicesz)))
+       (cond
+	 ((> nslices most-positive-fixnum)
+	  (err 1 "SLICESZ is too small for the given SIZE of a ~
+                  SPARSE-VECTOR."))
+	 (t
+	  (%make-spv :size size
+		     :slicesz slicesz
+		     :eltype eltype
+		     :default (and defaultp
+				   (subtypep eltype 'number)
+				   (coerce 0 eltype))
+		     :slices (make-array nslices :initial-element nil))))))))
 
-(defmacro make-sparse-vector (&rest args)
-  "Just a convenience for instantiating SPARSE-VECTOR objects."
-  `(make-instance 'sparse-vector ,@args))
+(defmacro make-spv (&rest args)
+  "Just a convenience for creating new SPARSE-VECTOR."
+  `(make-sparse-vector ,@args))
 
 (defun spvref (spv index)
-  "Returns the value of the INDEXth element in the supplied
-SPARSE-VECTOR."
-  (declare (type integer index))
-  (with-slots (slices slicesz default size) spv
-      (declare (type fixnum slicesz)
-	       (type (integer 1 *) size)
-	       (type simple-vector slices))
-      (unless (< index size)
-	(error 'index-error :spv spv :index index))
-      (multiple-value-bind (i j)
-	  (truncate index slicesz)
-	(declare (type fixnum i j))
-	(let ((s (svref slices i)))
-	  (or (and s (svref s j))
-	      default)))))
+  "Accesses the element of the supplied SPARSE-VECTOR indicated by the
+subscript INDEX, or NIL if an error occurs.  A second value is also
+returned, reflecting the success of the access."
+  (declare (type sparse-vector spv)
+	   (type integer index))
+  (let ((size (spv-size spv))
+	(slicesz (spv-slicesz spv)))
+    ;; This is longer than it needs to be, because we're trying to
+    ;; help the optimizer as much as we can to employ fast fixnum
+    ;; math.  Question: would unboxed integers be faster?
+    (declare (type integer size)
+	     (type fixnum slicesz))
+    (cond
+      ((or (not (integerp index)) (not (plusp index)))
+       (err 2 "AnINDEX of a SPARSE-VECTOR must be a positive integer."))
+      ((>= index size)
+       (err 2 "An INDEX, ~W, of a SPARSE-VECTOR must be less than ~
+               its SIZE, ~W." index (spv-size spv)))
+      (t
+       (multiple-value-bind (i j)
+	   (truncate index slicesz)
+	 (declare (type fixnum i j))
+	 (let ((s (svref (spv-slices spv) i)))
+	   (or (and s (svref s j))
+	       (spv-default spv))))))))
 
 ;; (defun make-spv (&key (slicesize 1024) (type t) default)
 ;;   "Just a convenience function for creating sparse vectors, slightly
