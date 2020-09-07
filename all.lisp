@@ -12,6 +12,6 @@
   (:nicknames :accretions)
   (:use :common-lisp)
 ;  (:use-reexport :accretions/clos/generics :accretions/clos/bag)
-  (:import-from :accretions/spv #:sparse-vector-p)
-  (:export #:sparse-vector-p))
+  (:import-from :accretions/spv #:spvp)
+  (:export #:spvp))
 (in-package :accretions/all)

@@ -46,8 +46,7 @@ and their related algorithms."
   
   :class :package-inferred-system
   :defsystem-depends-on (:asdf-package-system) 
-  :depends-on (:accretions/sparse-vector :accretions/all)
-
+  :depends-on (:alexandria :accretions/spv :accretions/all)
   :in-order-to ((test-op (test-op :accretions/test/all))))
 
 (asdf:defsystem :accretions/test
