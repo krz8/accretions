@@ -14,24 +14,20 @@
 	   ))
 (in-package :accretions/spv)
 
-;; (defparameter *max-size* (* array-dimension-limit array-dimension-limit)
-;;   "The maximum size of any sparse vector.  In practice, there are
-;;   other limitations \(memory, swap, address bits\) that will limit the
-;;   size of a sparse vector, but if none apply, this is the hard limit
-;;   of our design.")
-
-(defparameter *max-vector-size* 64	; array-dimension-limit
+(defparameter *max-vector-size* array-dimension-limit
   "This defines the maximum size of any vector or slice at any level
   contained within a sparse vector.Normally, this is
   ARRAY-DIMENSION-LIMIT, but for testing purposes you might use a much
   lower number here to artifically induce deeper nesting in the sparse
   vector.")
 
-(defparameter *non-sparse-threshold* 12
+(defparameter *non-sparse-threshold* 64
   "If a sparse vector is requested of this size or smaller, the result
   is a sparse vector that has no nesting: its depth is forced 1, and
   its index size and slice size are ignored.  I don't know what the
-  \"right\" value is here, I'm just taking a guess.")
+  \"right\" value is here, I'm just taking a guess.  The code that
+  this affects should, honestly, never be triggered \(why are you
+  using a sparse vector in the first place?\)")
 
 (defparameter *error* *error-output*
   "Names a stream to which descriptions of errors in the SPARSE-VECTOR
@@ -49,12 +45,12 @@
 	   args))
   nil)
 
-(defun warn (control-string &rest args)
+(defun wrn (control-string &rest args)
   "Like ERR, except noting that this is a warning, and always
   returning T."
-    (apply #'format *error*
-	   (concatenate 'string "~&Warning: " control-string "~%")
-	   args))
+  (apply #'format *error*
+	 (concatenate 'string "~&Warning: " control-string "~%")
+	 args)
   t)
 
 (defmacro all-plus-p (&rest args)
@@ -68,11 +64,13 @@
       (push `(plusp ,a) tests))
     `(and ,@tests)))
 
+(defmacro symb (&rest args)
+  `(alexandria:symbolicate ,@args))
+
 (defun iroot (x n)
   "Returns the nearest integer equal to OR GREATER THAN the actual Nth
   root of X.  A secondary return value is the difference between the
   returned integer and the actual root."
-  (declare (type integer x n))		; does this help?
   (ceiling (expt x (/ 1 n))))
 
 (defstruct (sparse-vector (:conc-name spv-) (:constructor make-spv))
@@ -85,8 +83,8 @@
   ;; describing how many levels of vectors there are until you get to
   ;; an actual element.
   (depth 0 :type fixnum)
-  ;; The top level index vector, and any instantiated middle vectors,
-  ;; are of this size.
+  ;; The top level index vector, and any instantiated middle index
+  ;; vectors, are of this size.
   (index-size 0 :type fixnum)
   ;; The number of actual elements in each slice ("bottom" vector).
   (slice-size 0 :type fixnum)
@@ -98,183 +96,226 @@
   ;; until otherwise set.
   (initial-element nil)
   ;; The tree of vectors.
-  (tree nil :type (or null simple-vector)))
+  (tree nil :type (or null simple-vector))
+  ;; A list of index divisors, from top level to bottom.  For each
+  ;; level in the tree of vectors, the corresponding value in this
+  ;; list is the number of sparse-vector elements represented by an
+  ;; element in the vector at that depth.
+  (divisors nil :type (or null list)))
 
-(defun ensure-types (size depth indexsz slicesz element-type)
-  "Ensure that the values of certain attributes of a sparse vector to
-  be created are of valid types.  This doesn't validate the values
-  themselves, but simply that what the user supplied conforms.
-  Returns T if everything looks plausible, or NIL if the sparse vector
-  cannot be instantiated."
-  (macrolet ((tst (var)
-	       `((not (integerp ,var))
-		 (err "The ~A of a sparse vector must be an integer."
-		      ,(string var)))))
-    (cond
-      (tst size)
-      (tst depth)
-      (tst indexsz)
-      (tst slicesz)
-      ((null element-type)
-       (err "The element type of a sparse vector must not be NIL."))
-      (t
-       t))))
+;; depth 3
+;; tree       #(- - - - o - - - - - - - o - …)        index vector
+;;                      |               |
+;;                      #(- - o - …)    #(…)          index vectors
+;;                            |
+;;                            #(d d d d x d d …)      slice vectors
+;; where - is a nil element
+;; where o points to another vector (index or slice)
+;; where d is the default element for the sparse vector
+;; where x is an element that has been setf through spvref
 
-;; The depth, index size, and slice size given to us by a user are
-;; strong suggestions.  If they work, we leave them alone.  If they
-;; don't work, we'll first modify the slice size.  If that doesn't
-;; work, we'll change the index sizes.  If *that* doesn't work, then
-;; we change the depth.
-;;
-;; If a size attribute (depth, index size, or slice size) is 0, that
-;; represents an "unset" value from the user.  We do this, rather than
-;; NIL, to keep the type specifiers short, and to quickly ensure all
-;; values can be tested with ZEROP or PLUSP as needed.
-;;
-;; All the functions that work with testing or setting the size
-;; attributes of a sparse vector have one of three return values. NIL
-;; means that the tests didn't apply, no changes were made, and the
-;; caller should continue trying other functions. T and 'FAIL both
-;; mean further testing should stop; T indicating success, and 'FAIL
-;; meaning just that.
 
-(defun check-sizes-tiny (spv)
-  "We need to draw the line somewhere; under a certain size, there is
+(defmacro with-spv ((&rest args) instance &body body)
+  "Just a quickie to save typing below.  It's similar to WITH-SLOTS,
+  but works with the spv structure.  It also supports type
+  assertions on each accessor with an optional third argument in
+  each slot entry (see d below).  Types have to be options, the standard
+  affords no inspection on structures (unlike CLOS (although most Lisps
+  do support it, and in fact WITH-SLOTS works with structures, but this
+  is nonstandard and implementation-dependent, which is why we're here
+  in the first place)).  The optional type assertions might help some
+  compilers, but should be harmless to others.
+
+      (with-spv (size (dv divisors) (d depth fixnum)) *s*
+        ...)
+  yields
+      (symbol-macrolet ((size (spv-size *s*)) (dv (spv-divisors *s*))
+                        (d (the fixnum (spv-depth *s*))))
+	...)"
+    (let (bindings)
+      (dolist (a args)
+	(cond
+	  ((listp a)
+	   (destructuring-bind (var acc &optional typ) a
+    	     (let ((fun (symb 'spv- acc)))
+	       (if typ
+		   (push `(,var (the ,typ (,fun ,instance))) bindings)
+		   (push `(,var (,fun ,instance)) bindings)))))
+	  (t
+	   (push `(,a (,(symb 'spv- a) ,instance)) bindings))))
+      `(symbol-macrolet ,bindings
+	 ,@body)))
+
+    ;; For example: consider a sparse vector with a depth of
+    ;; 3.  The elements of the top vector will, themselves, contain
+    ;; vectors.  Each of those will also contain a vector, containing a
+    ;; slice of the total sparse vector.  Now, if divisors was (300 50),
+    ;; to access element i of the sparse vector, first (truncate i 300)
+    ;; => j, k.  j gives the element of the top vector to use, which is
+    ;; a vector itself.  (truncate k 50) => l, m.  l is the element in
+    ;; that vector to use, which points to a slice vector.  Get element
+    ;; m of the slice vector, and you're set.
+
+    ;; The depth, index size, and slice size given to us by a user are
+    ;; strong suggestions.  If they work, we leave them alone.  If they
+    ;; don't work, we'll first modify the slice size.  If that doesn't
+    ;; work, we'll change the index sizes.  If *that* doesn't work, then
+    ;; we change the depth.
+    ;;
+    ;; If a size attribute (depth, index size, or slice size) is 0, that
+    ;; represents an "unset" value from the user.  We do this, rather than
+    ;; NIL, to keep the type specifiers short, and to quickly ensure all
+    ;; values can be tested with ZEROP or PLUSP as needed.
+    ;;
+    ;; All the functions that work with testing or setting the size
+    ;; attributes of a sparse vector have one of three return values. NIL
+    ;; means that the tests didn't apply, no changes were made, and the
+    ;; caller should continue trying other functions. T and 'FAIL both
+    ;; mean further testing should stop; T indicating success, and 'FAIL
+    ;; meaning just that.
+
+    (defun check-sizes-tiny (spv)
+      "We need to draw the line somewhere; under a certain size, there is
   just no point to a sparse vector at all.  Maybe we should assert an
   error when this happens?  Anyway, returns T when leaving the sparse
   vector set with a depth of 1, or NIL when testing should continue."
-  (declare (type sparse-vector spv))
-  (when (<= (spv-size spv) *non-sparse-threshold*)
-    (setf (spv-depth spv) 1
-	  (spv-index-size spv) 0
-	  (spv-slice-size spv) size)
-    (warn "The requested size of the sparse vector is not greater ~
-          than *NON-SPARSE-THRESHOLD*, so a sparse vector of DEPTH ~
-          1 will be created, ignoring any supplied values for DEPTH, ~
-          INDEX-SIZE, or SLICE-SIZE.")))
+      (with-spv (size) spv
+	(when (<= size *non-sparse-threshold*)
+	  (setf (spv-depth spv) 1
+		(spv-index-size spv) 0
+		(spv-slice-size spv) size)
+	  (wrn "The requested size of the sparse vector is not greater ~
+           than *NON-SPARSE-THRESHOLD*, so a sparse vector of DEPTH ~
+           1 will be created, ignoring any supplied values for DEPTH, ~
+           INDEX-SIZE, or SLICE-SIZE."))))
 
-(defun check-sizes-all (spv)
-  "If the user specified everything, see if the resulting sparse
+    (defun check-sizes-all (spv)
+      "If the user specified everything, see if the resulting sparse
   vector fits.  If not, try relaxing one or more attributes until a
   good sparse vector is possible.  Returns T if everything is good and
   the sparse vector can be created as-is, returns NIL if testing should
   continue \(after possibly zeroing one or more attributes\), or
   returns 'FAIL if there's just no chance of making this sparse vector
   work."
-  (declare (type sparse-vector spv))
-  (let ((size (spv-size spv)) (depth (spv-depth spv))
-	(indexsz (spv-index-size spv)) (slicesz (spv-slice-size spv)))
-    (when (all-plus-p size depth indexsz slicesz)
-      (cond
-	((<= size (* slicesz (expt indexsz (1- depth))))
-	 t)
-	((<= size (* array-dimension-limit (expt indexsz (1- depth))))
-	 (setf (spv-slice-size spv) 0)
-	 (warn "The specified SLICE-SIZE, ~W, of the requested sparse ~
-               vector has been disregarded in order to satisfy the ~
-               requested SIZE, ~W." slicesz size)
-	 nil)
-	((<= size (* array-dimension-limit
-		     (expt array-dimension-limit (1- depth))))
-	 (setf (spv-index-size spv) 0
-	       (spv-depth-size spv) 0)
-	 (warn "The specified INDEX-SIZE, ~W, and SLICE-SIZE, ~W, of ~
-               the requested sparse vector have been disregarded in ~
-               order to satisfy the requested SIZE, ~W." indexsz slicesz size)
-	 nil)
-	(t
-	 (setf (spv-depth spv) 0
-	       (spv-index-size spv) 0
-	       (spv-depth-size spv) 0)
-	 (warn "The specified DEPTH, INDEX-SIZE, and SLICE-SIZE of ~
-               the requested sparse vector have all been disregarded in ~
-               order to satisfy the requested SIZE, ~W." size)
-	 nil)))))
+      (with-spv (size depth indexsz slicesz) spv
+	(when (all-plus-p size depth indexsz slicesz)
+	  (cond
+	    ((<= size (* slicesz (expt indexsz (1- depth))))
+	     t)
+	    ((<= size (* array-dimension-limit (expt indexsz (1- depth))))
+	     (setf (spv-slice-size spv) 0)
+	     (wrn "The specified SLICE-SIZE, ~W, of the requested sparse ~
+              vector has been disregarded in order to satisfy the ~
+              requested SIZE, ~W." slicesz size)
+	     nil)
+	    ((<= size (* slicesz (expt array-dimension-limit (1- depth))))
+	     (setf (spv-index-size spv) 0)
+	     (wrn "The specified INDEX-SIZE, ~W, of the requested sparse ~
+              vector has been disregarded in order to satisfy the ~
+              requested SIZE, ~W." indexsz size)
+	     nil)
+	    ((<= size (expt array-dimension-limit depth))
+	     (setf (spv-index-size spv) 0
+		   (spv-depth spv) 0)
+	     (wrn "The specified INDEX-SIZE, ~W, and SLICE-SIZE, ~W, of ~
+              the requested sparse vector have been disregarded in ~
+              order to satisfy the requested SIZE, ~W." indexsz slicesz size)
+	     nil)
+	    (t
+	     (setf (spv-depth spv) 0
+		   (spv-index-size spv) 0
+		   (spv-depth spv) 0)
+	     (wrn "The specified DEPTH, INDEX-SIZE, and SLICE-SIZE of ~
+              the requested sparse vector have all been disregarded in ~
+              order to satisfy the requested SIZE, ~W." size)
+	     nil)))))
 
-;; (do* ((level 2 (1+ level))
-;; 	   (total (expt slicesz level) (expt slicesz level)))
-;; 	  ((>= total req-size)
-;; 	   (values level slicesz))))))
+    ;; (do* ((level 2 (1+ level))
+    ;; 	   (total (expt slicesz level) (expt slicesz level)))
+    ;; 	  ((>= total req-size)
+    ;; 	   (values level slicesz))))))
 
-(defun check-sizes-slice (spv)
-  "If we've been given a SLICE-SIZE but nothing else, find a DEPTH and
+    #+nil
+    (defun check-sizes-slice (spv)
+      "If we've been given a SLICE-SIZE but nothing else, find a DEPTH and
   INDEX that will satisfy the requested SIZE for the sparse vector.
   Returns T if we've found it, or NIL if nothing obvious works."
-  (declare (type sparse-vector spv))
-  (let ((size (spv-size spv)) (depth (spv-depth spv))
-	(indexsz (spv-index-size spv)) (slicesz (spv-slice-size spv)))
-    (when (and (plusp slizesz) (zerop depth) (zerop indexsz))
-      (let ((indexes (ceiling size slicesz)))
-	(do* ((depth 2 (1+ depth)))
-	     ((x (()))))))))
+      (with-spv (size depth indexsz slicesz) spv
+	(when (and (plusp slicesz) (zerop depth) (zerop indexsz))
+	  (do ((depth 0 (1+ depth)))
+	      ((> depth 10) nil)    ; just too big, this isn't working
+	    )
+      
+	  (let ((indexes (ceiling size slicesz)))
+	    (do* ((depth 2 (1+ depth)))
+		 ((x (()))))))))
 
-(defun check-sizes-none (spv)
-  "If none of DEPTH, INDEX SIZE, or SLICE SIZE were set, determine a
+    (defun check-sizes-none (spv)
+      "If none of DEPTH, INDEX SIZE, or SLICE SIZE were set, determine a
   minimal sparse vector by taking roots of the requested size.  Note
   that it is just my hypotheis that this gives the smallest sparse
   vector, I have not actually proven it.  Returns T if the depth,
   index, and slice sizes have been set to something that will yield a
   working sparse vector, or NIL if nothing could be done."
-  (let ((size (spv-size spv)) (depth (spv-depth spv))
-	(indexsz (spv-index-size spv)) (slicesz (spv-slice-size spv)))
-    (unless (or (plusp depth) (plusp indexsz) (plusp slicesz))
-      (do* ((depth 2 (1+ depth))
-	    (x (iroot size depth) (iroot size depth)))
-	   ((< x *max-vector-size*)
-	    (setf (spv-depth spv) depth
-		  (spv-index-size spv) x
-		  (spv-slice-size spv) x)
-	    t)))))
+      (let ((size (spv-size spv)) (depth (spv-depth spv))
+	    (indexsz (spv-index-size spv)) (slicesz (spv-slice-size spv)))
+	(unless (or (plusp depth) (plusp indexsz) (plusp slicesz))
+	  (do* ((depth 2 (1+ depth))
+		(x (iroot size depth) (iroot size depth)))
+	       ((< x *max-vector-size*)
+		(setf (spv-depth spv) depth
+		      (spv-index-size spv) x
+		      (spv-slice-size spv) x)
+		t)))))
 
-;;   It is only my hypothesis that this function returns a particularly
-;;   good small sparse vector for the given size; I have not, in fact,
-;;   tried to prove it.  For a faster sparse vector, at the price of
-;;   space, specify some attributes to MAKE-SPARSE-VECTOR \(which will
-;;   cause a different function than this one to be called\)."
-;;   (do* ((level 2 (1+ level))
-;; 	(slicesz (iroot req-size level) (iroot req-size level)))
-;;        ((< slicesz *max-vector-size*)
-;; 	(list level slicesz slicesz))))
+    ;;   It is only my hypothesis that this function returns a particularly
+    ;;   good small sparse vector for the given size; I have not, in fact,
+    ;;   tried to prove it.  For a faster sparse vector, at the price of
+    ;;   space, specify some attributes to MAKE-SPARSE-VECTOR \(which will
+    ;;   cause a different function than this one to be called\)."
+    ;;   (do* ((level 2 (1+ level))
+    ;; 	(slicesz (iroot req-size level) (iroot req-size level)))
+    ;;        ((< slicesz *max-vector-size*)
+    ;; 	(list level slicesz slicesz))))
 
 
-(defun check-sizes (spv)
-  (declare (type sparse-vector spv))
-  (let ((x (or (check-sizes-tiny spv)
-	       (check-sizes-all spv)
-	       (check-sizes-none spv))))
-    ;; If 'FAIL, we can be reasonably certain an error message was
-    ;; already sent. If NIL, then nothing worked and we need to say
-    ;; something.  If T, that's a success and nothing needs to be
-    ;; sent.
-    (case x
-      ('fail nil)
-      (nil (err "A sparse vector of size ~W could not be created."
-		(spv-size spv)))
-      (t t))))
 
-(defun check-sizes (spv)
-  "Examine the combinations of size and other attributes given for the
+    (defun check-sizes (spv)
+      "If 'FAIL, we can be reasonably certain an error message was
+  already sent. If NIL, then nothing worked and we need to say
+  something.  If T, that's a success and nothing needs to be
+  sent."
+      (case (or (check-sizes-tiny spv)
+		(check-sizes-all spv)
+		(check-sizes-none spv))
+	('fail nil)
+	((nil) (err "A sparse vector of size ~W could not be created."
+		    (spv-size spv)))
+	(t t)))
+
+    (defun check-sizes (spv)
+      "Examine the combinations of size and other attributes given for the
   sparse vector.  Missing attributes are determined, others are
   adjusted if necessary.  A true value is returned if the resulting
   sparse vector can be used, otherwise NIL."
-  (macrolet ((chk (var)
-	       `((not (and (integerp ,var) (1 < ,var array-dimension-limit)))
-		 (err "When specified, the ~A, ~W, of a sparse vector ~
+      (macrolet ((chk (var)
+		   `((not (and (integerp ,var) (1 < ,var array-dimension-limit)))
+		     (err "When specified, the ~A, ~W, of a sparse vector ~
                       must be a positive integer between 1 and ~
                       ARRAY-DIMENSION-LIMIT." ,(string var) ,var))))
-    (let ((size (spv-size spv)) (depth (spv-depth spv))
-	  (index-size (spv-index-size spv)) (slice-size (spv-slice-size spv)))
-      (cond
-	((not (typep size '(integer 1 *)))
-	 (err "The SIZE, ~W, of a sparse vector must be a positive integer."
-	      size))
-	(chk depth)
-	(chk index-size)
-	(chk slice-size)
-	((handle-sizes spv) t)))))
+	(let ((size (spv-size spv)) (depth (spv-depth spv))
+	      (index-size (spv-index-size spv)) (slice-size (spv-slice-size spv)))
+	  (cond
+	    ((not (typep size '(integer 1 *)))
+	     (err "The SIZE, ~W, of a sparse vector must be a positive integer."
+		  size))
+	    (chk depth)
+	    (chk index-size)
+	    (chk slice-size)
+	    ((handle-sizes spv) t)))))
 
-(defun fix-initel (initel initel-p eltype)
-  "Returns the initial-element we should use for a sparse vector.  If
+    (defun fix-initel (initel initel-p eltype)
+      "Returns the initial-element we should use for a sparse vector.  If
   the caller names a specific initial-element, ensure that it respects
   the element-type.  Otherwise, if the caller specifies an element
   type that is some kind of number, make our initial element zero.
@@ -282,46 +323,78 @@
 
   Returns a list of initial element and element type when successful,
   or NIL on an error."
-  (cond
-    ((not initel-p)
-     (list (and (subtypep eltype 'number) (coerce 0 eltype)) eltype))
-    ((typep initel eltype)
-     (list initel eltype))
-    (t
-     (err "The initial element, ~W, of a sparse vector must be of the ~
+      (cond
+	((not initel-p)
+	 (list (and (subtypep eltype 'number) (coerce 0 eltype)) eltype))
+	((typep initel eltype)
+	 (list initel eltype))
+	(t
+	 (err "The initial element, ~W, of a sparse vector must be of the ~
           element type, ~W." initel eltype))))
 
-(defun init-spv (spv)
-  "Returns SPV on success, or NIL."
-  (declare (type sparse-vector spv))
-  (setf (spv-tree spv) (make-array (spv-index-size spv)))
-  spv)
+    (defun init-spv (spv)
+      "Returns SPV on success, or NIL."
+      (with-spv ((d depth)) spv
+	(setf (spv-tree spv) (make-array (funcall (if (> ) spv-index-size) spv))))
+      spv)
 
-;; We could get away with &ALLOW-OTHER-KEYS here, but specifying the
-;; exact keywords gives us a chance to work with their values before
-;; instantiating the structure. A compiler like SBCL will check types
-;; and everything for us, but others might not.  So we'll do it here
-;; explicitly for everyone.
-(defun make-sparse-vector (size &key (depth 2) index-size slice-size
-				  (element-type t)
-				  (initial-element nil initial-element-p))
-  "Constructor for a SPARSE-VECTOR.  SIZE requests the total number of
+    ;; We could get away with &ALLOW-OTHER-KEYS here, but specifying the
+    ;; exact keywords gives us a chance to work with their values before
+    ;; instantiating the structure. A compiler like SBCL will check types
+    ;; and everything for us, but others might not.  So we'll do it here
+    ;; explicitly for everyone.
+    (defun make-sparse-vector (size &key (depth 2) (index-size 0) (slice-size 0)
+				      (element-type t)
+				      (initial-element nil initial-element-p))
+      "Constructor for a SPARSE-VECTOR.  SIZE requests the total number of
   elements contained in the vector; this value may be larger than
   ARRAY-DIMENSION-LIMIT or MOST-POSITIVE-FIXNUM.  INITIAL-ELEMENT and
   ELEMENT-TYPE are as MAKE-ARRAY.  DEPTH, INDEX-SIZE, and SLICE-SIZE
   are all optional; for whichever parameters aren't specified, values
   will be chosen that satisfy the parameters given.  Returns a new
   SPARSE-VECTOR, or NIL on some error."
-  (let ((spv (make-spv :size size :depth depth :index-size index-size
-		       :slice-size slice-size :element-type eltype
-		       :initial-element initial-element)))
-    (cond
-      ((and (handle-sizes spv)
-	    (handle-initel spv initial-element-p))
-       (setf (spv-tree spv) (make-array (spv-index-size spv)))
-       spv)
-      (t
-       nil))))
+      (cond
+	((not (typep size '(integer 1 *)))
+	 (err "The given SIZE, ~W, of a sparse vector must be a ~
+          positive integer." size))
+	((not (typep depth '(integer 0 *)))
+	 (err "The given DEPTH, ~W, of a sparse vector must be a ~
+          positive integer." depth))
+	((not (typep index-size `(integer 0 ,array-dimension-limit)))
+	 (err "The given INDEX-SIZE, ~W, of a sparse vector must be a ~
+          positive integer less than ARRAY-DIMENSION-LIMIT." index-size))
+	((not (typep slice-size `(integer 0 ,array-dimension-limit)))
+	 (err "The given SLICE-SIZE, ~W, of a sparse vector must be a ~
+          positive integer less than ARRAY-DIMENSION-LIMIT." slice-size))
+	((not (null element-type))
+	 (err "The given ELEMENT-TYPE, ~W, of a sparse vector must not be NIL."
+	      element-type))
+	((not (typep initial-element element-type))
+	 (err "The given INITIAL-ELEMENT, ~W, of a sparse vector must be ~
+           of type ELEMENT-TYPE, ~W." initial-element element-type))
+	(t
+	 (init-spv
+	  (make-spv :size size :depth depth :index-size index-size
+		    :slice-size slice-size :element-type eltype
+		    :initial-element initial-element)))))
+
+
+    (flet ((chk-size (x) (unless (typep x '(integer 0 *))
+			   (err "The SIZE of a sparse vector must be a ~
+                              positive integer.")
+			   (return)))))
+    (check-types size depth index-size slice-size
+		 initial-element initial-element-p)
+    (let ((spv (make-spv :size size :depth depth :index-size index-size
+			 :slice-size slice-size :element-type eltype
+			 :initial-element initial-element)))
+      (cond
+	((and (handle-sizes spv)
+	      (handle-initel spv initial-element-p))
+	 (setf (spv-tree spv) (make-array (spv-index-size spv)))
+	 spv)
+	(t
+	 nil))))
 
 ;; (defun validate-attrs (size depth index-size slice-size)
 ;;   "When constructing a sparse vector of the specified SIZE, check that
