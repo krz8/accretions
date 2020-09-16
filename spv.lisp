@@ -14,16 +14,42 @@
 	   ))
 (in-package :accretions/spv)
 
-(defparameter *max-vector-size* array-dimension-limit
-  "This defines the maximum size of any vector or slice at any level
-  contained within a sparse vector.Normally, this is
-  ARRAY-DIMENSION-LIMIT, but for testing purposes you might use a much
-  lower number here to artifically induce deeper nesting in the sparse
-  vector.")
-
 (defparameter *error* *error-output*
   "Names a stream to which descriptions of errors in the SPARSE-VECTOR
   package are sent.  When NIL, no error messages are generated.")
+
+(defparameter *max-vector-sizes* `(,(* 1024   64   )
+				   ,(* 1024 1024   )
+				   ,(* 1024 1024  8)
+				   ,(* 1024 1024 64))
+  "When we solve a splay for a given size, this parameter represents
+  the maximum size of any vector in our tree.  We have a set of
+  values, corresponding to a :SPEED parameter of 0-3, where:
+
+  . 0: Space is more important than speed.
+  . 1: The default.
+  . 2: Speed is more important than space.
+  . 3: Speed is of utmost importance, space is irrelevant.
+
+  It's important to realize how much smaller these numbers are than
+  you might expect.  When you consider ARRAY-DIMENSION-LIMIT and
+  MOST-POSITIVE-FIXNUM, it's easy to feel like a king.  The truth,
+  though, is that simple arrays and simple vectors allocate a
+  pointer's worth of space for each element, plus a tiny bit of
+  overhead for the array itself.  Even taking into account this
+  factor of four or eight bytes, typically, the practical limit
+  imposed by a lisp environment is much lower.  You'll run out
+  of heap LONG before you even get within magnitudes of the
+  aforementioned constants.  No joke.
+
+  Truth is, if this is really important to you?  Don't mess with
+  these constants, just supply your own splay for the vector
+  tree.")
+
+(defparameter *depth-limit* 10
+  "When solving the splay of the vector tree, this is the limit to how
+  \"deep\" we'll allow the tree to get.  Typical trees have a depth of
+  3.")
 
 (defun err (control-string &rest args)
   "If *ERROR* is not NIL, calls FORMAT on the supplied control string
@@ -49,12 +75,6 @@
   "Returns T if all arguments are positive numbers; else NIL.  If no
   arguments are supplied, returns T (maybe fix this?)."
   (every #'plusp args))
-
-(defun all-vector-size-p (&rest args)
-  "Returns T if all arguments are positive numbers less than or equal
-  to *MAX-VECTOR-SIZE*; else NIL.  If no arguments are supplied,
-  returns T (maybe fix this?)."
-  (every #'(lambda (x) (<= 1 x *max-vector-size*)) args))
 
 (defun list-of-posints-p (list)
   "Returns T if LIST contains integers that are all positive.  If LIST
@@ -124,11 +144,11 @@
   (when spva
     (let ((splay (spva-splay spva)))
       (cond
-	((notevery #'(lambda (x) (<= 2 x *max-vector-size*))
+	((notevery #'(lambda (x) (<= 2 x array-dimension-limit))
 		   splay)
 	 (err "Every value in the list describing the splay of a ~
               SPARSE-VECTOR must be in the range [2,~d]."
-	      *max-vector-size*))
+	      array-dimension-limit))
 	(t
 	 (setf (spva-size spva) (apply #'* splay))
 	 spva)))))
@@ -138,21 +158,21 @@
   sparse array size, and a hint regarding the space/speed tradeoffs,
   determine a splay arrangement for the sparse vector and return."
   (when spva
-    (case (spva-speed spva)
-      ;; 3: go as fast as possible, so we'll allow the vectors in the
-      ;; tree to scale to ridiculous size, all the way up to the
-      ;; maximum vector size.  Doesn't feel like we're saving much
-      ;; space, I guess this setting is more for ridiculous sparse
-      ;; vector sizes
-      (3 spva)
-      (2 spva)
-      ;; This is the default "regular" setting
-      (1 spva)
-      ;; 0: pack things in tightly, we want to save space over
-      ;; everything else.
-      (0
-       spva)
-)))
+    (let ((max (nth (spva-speed spva) *max-vector-sizes*))
+	  (size (spva-size spva)))
+      (do ((depth 2 (1+ depth)))
+	  ((> depth *depth-limit*)
+	   (err "Unreasonable size, ~W, encountered in ~
+                MAKE-SPARSE-VECTOR. If this size is intentional, ~
+                bind *DEPTH-LIMIT* to a value higher than ~W."
+		size *depth-limit*))
+	(do ((width 64 (* 2 width)))
+	    ((> width max)
+	     nil)
+	  (when (>= (expt width depth) size)
+	    (setf (spva-splay spva) (make-list depth
+					       :initial-element width))
+	    (return-from solve-splay spva)))))))
 
 (defun chk-splay (spva)
   "Checks a splay tree described in the supplied spv-args, or computes
@@ -164,10 +184,10 @@
   (cond
     ((null spva)
      nil)
-    ((listp (svpa-splay spva))
-     (confirm-splay spva))
+    ((null (spva-splay spva))
+     (solve-splay spva))
     (t
-     (solve-splay spva))))
+     (confirm-splay spva))))
 
 (defun chk-size (spva)
   "The SIZE-OR-SPLAY argument to MAKE-SPARSE-VECTOR lands in the size
@@ -234,7 +254,7 @@
 	 spva)))))
 
 (defun make-sparse-vector (size-or-splay
-			   &key (element-type t)
+			   &key (element-type t) (speed 1)
 			   (initial-element nil initial-element-p))
   "Creates and returns a new SPARSE-VECTOR according to the supplied
   arguments, or NIL if there is some error.  Errors are typically
@@ -272,6 +292,7 @@
      (chk-initial-element
       (chk-element-type
        (make-spv-args :size size-or-splay
+		      :speed speed
 		      :element-type element-type
 		      :initial-element initial-element
 		      :initial-element-p initial-element-p)))))))
