@@ -71,34 +71,6 @@
 	 args)
   t)
 
-(defun all-plus-p (&rest args)
-  "Returns T if all arguments are positive numbers; else NIL.  If no
-  arguments are supplied, returns T (maybe fix this?)."
-  (every #'plusp args))
-
-(defun list-of-posints-p (list)
-  "Returns T if LIST contains integers that are all positive.  If LIST
-  is empty, returns NIL."
-  (cond
-    ((null list) nil)
-    ((notevery #'(lambda (x) (and (integerp x) (plusp x)))
-	       list) nil)
-    (t t)))
-
-(defun mkstr (&rest args)
-  "Turn all arguments into strings, and return the concatenation of
-  them.  Unoriginal but handy."
-  (with-output-to-string (s)
-    (let ((*standard-output* s))
-      (mapc #'princ args))))
-
-(defun symb (&rest args)
-  "Create and return a new symbol whose name is the concatenation of
-  all arguments.  Yes, Alexandria has this, too (called symbolicate),
-  but it only works on symbols.  This will work on any mix of symbols,
-  strings, what have you.  Seen in Paul Graham."
-  (values (intern (apply #'mkstr args))))
-
 (defun iroot (x n)
   "Returns the nearest integer equal to OR GREATER THAN the actual Nth
   root of X.  A secondary return value is the difference between the
