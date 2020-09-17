@@ -18,7 +18,7 @@
   "Names a stream to which descriptions of errors in the SPARSE-VECTOR
   package are sent.  When NIL, no error messages are generated.")
 
-(defparameter *max-vector-sizes* `(,(* 1024   64   )
+(defparameter *max-vector-sizes* `(,(* 1024    8   )
 				   ,(* 1024 1024   )
 				   ,(* 1024 1024  8)
 				   ,(* 1024 1024 64))
@@ -166,12 +166,17 @@
                 MAKE-SPARSE-VECTOR. If this size is intentional, ~
                 bind *DEPTH-LIMIT* to a value higher than ~W."
 		size *depth-limit*))
-	(do ((width 64 (* 2 width)))
+	(let ((x (iroot size depth)))
+	  (when (<= x max)
+	    (setf (spva-splay spva)
+		  (make-list depth :initial-element x))
+	    (return-from solve-splay spva)))
+#+nil	(do ((width 64 (* 2 width)))
 	    ((> width max)
 	     nil)
 	  (when (>= (expt width depth) size)
-	    (setf (spva-splay spva) (make-list depth
-					       :initial-element width))
+	    (setf (spva-splay spva)
+		  (make-list depth :initial-element width))
 	    (return-from solve-splay spva)))))))
 
 (defun chk-splay (spva)
