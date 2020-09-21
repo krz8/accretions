@@ -14,62 +14,130 @@
 	   ))
 (in-package :accretions/spv)
 
-(defparameter *error* *error-output*
-  "Names a stream to which descriptions of errors in the SPARSE-VECTOR
-  package are sent.  When NIL, no error messages are generated.")
-
-(defparameter *max-vector-sizes* `(,(* 1024    8   )
-				   ,(* 1024 1024   )
-				   ,(* 1024 1024  8)
-				   ,(* 1024 1024 64))
+(defparameter *max-vector-sizes* `(500 2000 8000 32000)
   "When we solve a splay for a given size, this parameter represents
   the maximum size of any vector in our tree.  We have a set of
   values, corresponding to a :SPEED parameter of 0-3, where:
 
-  . 0: Space is more important than speed.
-  . 1: The default.
+  . 0: Space is much more important than speed.
+  . 1: The default, where space is more important than speed.
   . 2: Speed is more important than space.
-  . 3: Speed is of utmost importance, space is irrelevant.
+  . 3: Speed is of utmost importance, space is irrelevant.")
 
-  It's important to realize how much smaller these numbers are than
-  you might expect.  When you consider ARRAY-DIMENSION-LIMIT and
-  MOST-POSITIVE-FIXNUM, it's easy to feel like a king.  The truth,
-  though, is that simple arrays and simple vectors allocate a
-  pointer's worth of space for each element, plus a tiny bit of
-  overhead for the array itself.  Even taking into account this
-  factor of four or eight bytes, typically, the practical limit
-  imposed by a lisp environment is much lower.  You'll run out
-  of heap LONG before you even get within magnitudes of the
-  aforementioned constants.  No joke.
+(defparameter *size-limit* (expt 10 67)
+  "The largest sparse vector we'll support.  It's tempting to make
+  this enormous, but this value is used to keep the depth of a vector
+  tree from growing out of control, so try to keep it to something
+  necessary.")
 
-  Truth is, if this is really important to you?  Don't mess with
-  these constants, just supply your own splay for the vector
-  tree.")
+(defmacro until (expr &body body)
+  "Create a DO loop that evaluates BODY so long as EXPR tests false.
+  Returns NIL once EXPR passes.  EXPR is tested before BODY is
+  evaluated on every loop.  UNTIL is the inverse of a traditional
+  WHILE loop."
+  (let ((e (gensym)))
+    `(do ((,e ,expr ,expr))
+	 (,e)
+       ,@body)))
 
-(defparameter *depth-limit* 10
-  "When solving the splay of the vector tree, this is the limit to how
-  \"deep\" we'll allow the tree to get.  Typical trees have a depth of
-  3.")
+(defun mkstr (&rest args)
+  "Common function that turns all arguments into strings, concatenates
+  them, and returns the new string."
+  (with-output-to-string (s)
+    (let ((*standard-output* s))
+      (mapc #'princ args))))
 
-(defun err (control-string &rest args)
-  "If *ERROR* is not NIL, calls FORMAT on the supplied control string
-  and any arguments, sending the message to the stream *ERROR*. Mostly
-  just a wrapper around FORMAT, except that setting *ERROR* to NIL
-  won't generate a string, but instead is the way to muzzle errors.
-  Always returns NIL."
-  (when *error*
-    (apply #'format *error*
-	   (concatenate 'string "~&Error: " control-string "~%")
-	   args))
-  nil)
+(defun symb (&rest args)
+  "Common function that returns a new symbol that is the concatenation
+  of all arguments. (symb 'foo \"bar\" 12) → FOOBAR12"
+  (values (intern (apply #'mkstr args))))
 
-(defun wrn (control-string &rest args)
-  "Like ERR, except noting that this is a warning, and always
-  returning T."
-  (apply #'format *error*
-	 (concatenate 'string "~&Warning: " control-string "~%")
-	 args)
-  t)
+(defmacro with-ss (var-slot-pairs prefix obj &body body)
+  "WITH-SLOTS is not specified to work with structure, per the
+  standard.  So we have WITH-SS (\"structure slots\") instead.  Each
+  VAR-SLOT pair is the name of a variable and the slot it should be
+  bound to. PREFIX is the common prefix to all accessor functions.
+  OBJ is the structure instance.  The variables are (unsurprisingly)
+  bound via SYMBOL-MACROLET.
+
+      (with-ss ((n name) (a age)) person- newbie
+        (stuff) …)
+      =>
+      (symbol-macrolet ((n (person-name newbie))
+                        (a (person-age newbie)))
+        (stuff) …)"
+  (do* ((vsp var-slot-pairs (cdr vsp))
+	(b (car vsp) (car vsp))
+	(bindings))
+       ((null vsp)
+	`(symbol-macrolet ,bindings ,@body))
+    (destructuring-bind (var thing) b
+      (push `(,var (,(symb prefix thing) ,obj)) bindings))))
+
+;; I originally intentionally avoided conditions, but since we're
+;; writing code to the CL standard, the condition system is already in
+;; use, we might as well use it!  Now, since we're switching to
+;; signalling conditions, we can get rid of chaining return values
+;; from the various chk- functions.
+
+(define-condition spverr (error)
+  ((name :initarg :name :reader spverr-name)
+   (value :initarg :value :reader spverr-value)
+   (problem :initarg :problem :reader spverr-problem))
+  (:default-initargs :value nil :name "n/a" :problem "n/a")
+  (:report (lambda (condition stream)
+	     (format stream "~&SPARSE-VECTOR error: ~A, ~W, ~A."
+		     (spverr-name condition)
+		     (spverr-value condition)
+		     (spverr-problem condition))))
+  (:documentation "Represents error conditions detected within the
+  SPARSE-VECTOR library."))
+
+(defmacro err (place problem)
+  "Signals SPVERR using PROBLEM directly, using PLACE as the VALUE,
+  and the quoted name of PLACE as the NAME in the condition."
+  `(error spverr :value ,place :name ',place :problem ,problem))
+
+(defmacro check ((place problem) expr)
+  "If EXPR fails, signal an SPVERR condition using PLACE and PROBLEM
+  as described in ERR.  Kind of like a decorated ASSERT."
+  `(unless ,expr
+     (err ,place ,problem)))
+
+(defmacro cerr (place problem)
+  "Signal a correctable SPVERR condition, using the quoted and plain
+  forms of PLACE as its NAME and VALUE, and using PROBLEM as its
+  same."
+  (let ((restart (mkstr "Supply a new " place ".")))
+    `(cerror ,restart 'spverr :value ,place :name ',place :problem ,problem)))
+
+(defmacro ccheck ((place problem &optional (readvar 'input)) expr &body body)
+  "Used to ensure an expression, EXPR, is true.  Until EXPR is true,
+  a condition describing the problem is raised via CERROR.  If the
+  user chooses to continue past the condition, input is solicited to
+  address the problem, BODY is evaluated to fix the condition, and
+  EXPR is tested again.  This continues until the expression passes or
+  the user chooses not to continue past the signalled condition.
+
+  PLACE is a form that has the problem described in the string
+  PROBLEM.  When a new expression is solicited from the user, it is
+  bound to the variable named by READVAR; if omitted, INPUT is used by
+  default (take care if crossing package boundaries).  With this
+  binding in place, BODY is then evaluated \(typically to \"fix\" the
+  problem\), and then the loop begins anew.
+
+  .Example of using CCHECK
+      (ccheck (foo \"must be even\")
+          (evenp foo)
+        (setf foo input))"
+  `(until ,expr
+     (cerr ,place ,problem)
+     (fresh-line)
+     (princ ,(mkstr "Enter a new " place ": "))
+     (let ((,readvar (read)))
+       (declare (ignorable ,readvar))
+       (fresh-line)
+       ,@body)))
 
 (defun iroot (x n)
   "Returns the nearest integer equal to OR GREATER THAN the actual Nth
@@ -110,46 +178,52 @@
   ;; vectors).  0 <= speed <= 3
   (speed 1))
 
+(defmacro with-spva (var-slot-pairs obj &body body)
+  "Wraps WITH-SS with SPVA- as the prefix to all slot access
+  functions.  This is just a shorthand."
+  `(with-ss ,var-slot-pairs spva- ,obj ,@body))
+
 (defun confirm-splay (spva)
-  "Returns SPVA when the vector tree splay specifiers make sense.
-  Returns NIL on an error."
-  (when spva
-    (let ((splay (spva-splay spva)))
-      (cond
-	((notevery #'(lambda (x) (<= 2 x array-dimension-limit))
-		   splay)
-	 (err "Every value in the list describing the splay of a ~
-              SPARSE-VECTOR must be in the range [2,~d]."
-	      array-dimension-limit))
-	(t
-	 (setf (spva-size spva) (apply #'* splay))
-	 spva)))))
+  "Signals SPVERR condition when the vector tree splay specifiers make
+  sense.  The return value is unimportant; if the function returns,
+  processing can continue."
+  (with-spva ((size size) (splay splay)) spva
+    (flet ((good-element (x) (and (integerp x) (<= 2 x array-dimension-limit)))
+	   (good-size () (< (apply #'* splay) *size-limit*)))
+      (ccheck (splay "must be a list of integers > 1")
+	  (and (consp splay) (every #'good-element splay))
+	(setf splay input))
+      (ccheck (splay "must yield a size < *SIZE-LIMIT*")
+	  (good-size)
+	(setf splay input)))
+    (setf size (apply #'* splay))))
 
 (defun solve-splay (spva)
-  "Returns SPVA on success, or NIL on failure.  Given just a desired
-  sparse array size, and a hint regarding the space/speed tradeoffs,
-  determine a splay arrangement for the sparse vector and return."
-  (when spva
-    (let ((max (nth (spva-speed spva) *max-vector-sizes*))
-	  (size (spva-size spva)))
-      (do ((depth 2 (1+ depth)))
-	  ((> depth *depth-limit*)
-	   (err "Unreasonable size, ~W, encountered in ~
+  "Given just a desired sparse array size, and a hint regarding the
+  space/speed tradeoffs, determine a splay arrangement for the sparse
+  vector.  The return value is unimportant; if the function returns,
+  processing can continue."
+  (with-spva ((splay splay) (size size) (speed speed)) spva
+    (do* ((max   (nth speed *max-vector-sizes*))
+	  (depth 2                              (1+ depth))
+	  (x     (iroot size depth)             (iroot size depth)))
+	 ((<= x max)
+	  (setf splay (make-list depth :initial-element x))
+	  spva)
+
+      #+nil
+      ((> depth *depth-limit*)
+       (err size "must be reasonably sized (or change *depth")
+       (err "Unreasonable size, ~W, encountered in ~
                 MAKE-SPARSE-VECTOR. If this size is intentional, ~
                 bind *DEPTH-LIMIT* to a value higher than ~W."
-		size *depth-limit*))
-	(let ((x (iroot size depth)))
-	  (when (<= x max)
-	    (setf (spva-splay spva)
-		  (make-list depth :initial-element x))
-	    (return-from solve-splay spva)))
-#+nil	(do ((width 64 (* 2 width)))
-	    ((> width max)
-	     nil)
-	  (when (>= (expt width depth) size)
-	    (setf (spva-splay spva)
-		  (make-list depth :initial-element width))
-	    (return-from solve-splay spva)))))))
+	    size *depth-limit*))
+      #+nil
+      (let ((x (iroot size depth)))
+	(when (<= x max)
+	  (setf (spva-splay spva)
+		(make-list depth :initial-element x))
+	  (return-from solve-splay spva))))))
 
 (defun chk-splay (spva)
   "Checks a splay tree described in the supplied spv-args, or computes
@@ -157,7 +231,8 @@
   make a few safe assumptions about the state of SPVA.  Either SIZE is
   zero and there is a splay tree of some kind, or SIZE is supplied and
   a splay tree needs to be generated.  SPVA is returned on success, or
-  NIL is returned after noting the error."
+  NIL is returned after noting the error.  The return value is
+  unimportant; if the function returns, processing can continue."
   (cond
     ((null spva)
      nil)
@@ -167,68 +242,63 @@
      (confirm-splay spva))))
 
 (defun chk-size (spva)
-  "The SIZE-OR-SPLAY argument to MAKE-SPARSE-VECTOR lands in the size
-  slot of the SPVA.  Here. we identify if it is a SIZE or a SPLAY.  If
-  it's a SPLAY, we just move it to SPLAY and leave SIZE at zero;
-  that'll trigger CHK-SPLAY.  If it's a SIZE, we just perform some
-  simple tests on it to ensure it's plausible.  Returns SPVA if
-  processing should continue, or NIL if there's an error and the
-  sparse vector cannot be created."
-  (when spva
-    (let ((ss (spva-size spva)))
-      (cond
-	((listp ss)
-	 (setf (spva-size spva) 0
-	       (spva-splay spva) ss)
-	 spva)
-	((not (and (integerp ss) (plusp ss)))
-	 (err "The size of a SPARSE-VECTOR must be a positive integer."))
-	(t
-	 spva)))))
+  "The SIZE-OR-SPLAY argument to MAKE-SPARSE-VECTOR first lands in the
+  SIZE slot of the SPVA.  Here. we identify if it is really is a SIZE
+  or instead a splay list.  If it's a list, we just move it to SPLAY
+  slot and leave SIZE at zero; if it's a SIZE, we just perform some
+  simple tests on it to ensure it's plausible.  CHK-SPLAY does the
+  rest, based on what we determine here.  The return value is
+  unimportant; if the function returns, processing can continue."
+  (with-spva ((size size) (splay splay)) spva
+    (if (listp size)
+	(setf splay size
+	      size 0)
+	(ccheck (size "must be a positive integer")
+	    (and (integerp size) (plusp size))
+	  (setf size input)))))
 
 (defun chk-speed (spva)
-  "Returns SPVA if the specified speed is plausible; else NIL."
-  (when spva
-    (let ((speed (spva-speed spva)))
-      (if (and (integerp speed) (<= 0 speed 3))
-	  spva
-          (err "The SPEED specifier to MAKE-SPARSE-VECTOR must be an ~
-               integer [0,3].")))))
+  "Ensures that the SPEED supplied to MAKE-SPARSE-VECTOR was
+  plausible.  The return value is unimportant; if the function
+  returns, processing can continue."
+  (with-spva ((speed speed)) spva
+    (ccheck (speed "must be an integer [0,3]")
+	(and (integerp speed) (<= 0 speed 3))
+      (setf speed input))))
 
 (defun chk-initial-element (spva)
   "When the INITIAL-ELEMENT of a SPARSE-VECTOR is specified, ensure
   that its type matches ELEMENT-TYPE.  If not specified, set it to NIL
   or some form of zero, if the ELEMENT-TYPE is a number of some kind.
-  Returns SPVA if it can still be used, or returns NIL on an error.
-  Assumes that ELEMENT-TYPE has already been checked."
-  (when spva
-    (let ((ie (spva-initial-element spva)) (et (spva-element-type spva)))
-      (cond
-	((not (spva-initial-element-p spva))
-	 (setf (spva-initial-element spva) (and (subtypep et 'number)
-						(coerce 0 et)))
-	 spva)
-	((not (typep ie et))
-	 (err "The INITIAL-ELEMENT, ~W, of a SPARSE-VECTOR must match ~
-            the ELEMENT-TYPE, ~W, of that vector." ie et))
-	(t
-	 spva)))))
+  The return value is unimportant; if the function returns, processing
+  can continue."
+  (with-spva ((initial-element initial-element)
+	      (element-type    element-type)
+	      (iep             initial-element-p)) spva
+    (if (not iep)
+	(setf initial-element (and (subtypep element-type 'number)
+				   (coerce 0 element-type)))
+	(ccheck (element-type "must match the ELEMENT-TYPE")
+	    (typep initial-element element-type)
+	  (setf initial-element input)))))
 
 (defun chk-element-type (spva)
-  "Check that the element type we've been given is valid.  Returns
-  either the SPV-ARGS we were passed, or NIL after writing an error
-  message.  This function makes no attempt to fix the element type,
-  it only detects errors."
-  (when spva
-    (let ((et (spva-element-type spva)))
-      (cond
-	((null et)
-	 (err "The ELEMENT-TYPE of a SPARSE-VECTOR must not be NIL."))
-	((not (subtypep et t))
-	 (err "The ELEMENT-TYPE must be a valid type; ~W is not a ~
-         subtype of T." et))
-	(t
-	 spva)))))
+  "Check that the element type we've been given is valid.  This
+  function makes no attempt to fix the element type, it only signals
+  errors.  The return value is unimportant; if the function returns,
+  processing can continue."
+  (with-spva ((element-type element-type)) spva
+    (ccheck (element-type "must be a plausible type specifier")
+	(and element-type (subtypep element-type t))
+      (setf element-type input))))
+
+(defparameter *spva-checks* (list #'chk-element-type #'chk-initial-element
+				  #'chk-speed #'chk-size #'chk-splay)
+  "A list of functions to be called to validate an SPV argument
+  structure.  Each function is expected to signal an SPVERR condition
+  when detecting an error.  Once all functions return, processing
+  should continue, considering the SPV-ARGS structure they were passed
+  to now be safe and valid.")
 
 (defun make-sparse-vector (size-or-splay
 			   &key (element-type t) (speed 1)
@@ -263,16 +333,13 @@
   if a sparse vector is created with some kind of number as the
   ELEMENT-TYPE, but an INITIAL-VALUE is not specified, a zero of
   ELEMENT-TYPE made the initial value."
-  (chk-splay
-   (chk-size
-    (chk-speed
-     (chk-initial-element
-      (chk-element-type
-       (make-spv-args :size size-or-splay
-		      :speed speed
-		      :element-type element-type
-		      :initial-element initial-element
-		      :initial-element-p initial-element-p)))))))
+  (let ((spva (make-spv-args :size size-or-splay
+			     :speed speed
+			     :element-type element-type
+			     :initial-element initial-element
+			     :initial-element-p initial-element-p)))
+    (mapc #'(lambda (f) (funcall f spva)) *spva-checks*)
+    spva))
 
 ;; (defstruct (sparse-vector (:conc-name spv-) (:constructor make-spv))
 ;;   ;; Divisors is a list that describes how many elements are
@@ -914,3 +981,8 @@
 ;; 					      :element-type (spvtype spv))))
     
 ;;     ))
+
+
+;; Local Variables:
+;; eval: (put 'ccheck 'common-lisp-indent-function '(&lambda 4 &body))
+;; End:
