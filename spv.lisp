@@ -157,8 +157,10 @@
 (defun iroot (x n)
   "Returns the nearest integer equal to OR GREATER THAN the actual Nth
   root of X.  A secondary return value is the difference between the
-  returned integer and the actual root."
-  (ceiling (expt x (/ 1 n))))
+  returned integer and the actual root.  Errors are trapped and zero
+  is returned instead."
+  (handler-case (ceiling (expt x (/ 1 n)))
+    (error (condition) (declare (ignore condition)) (values 0 0.0))))
 
 ;; SPV-ARGS is an intentionally simple and small structure.  We create
 ;; them to capture the various settings from the caller to
@@ -220,11 +222,11 @@
   processing can continue."
   (with-spva ((splay splay) (size size) (speed speed)) spva
     (do* ((max   (nth speed *max-vector-sizes*))
-          (depth 2                              (1+ depth))
-          (x     (iroot size depth)             (iroot size depth)))
-         ((<= x max)
-          (setf splay (make-list depth :initial-element x))
-          spva))))
+	  (depth 2                              (1+ depth))
+	  (x     (iroot size depth)             (iroot size depth)))
+	 ((and (plusp x) (<= x max))	; the plusp catches errors
+	  (setf splay (make-list depth :initial-element x))
+	  spva))))
 
 (defun chk-splay (spva)
   "Checks a splay tree described in the supplied spv-args, or computes
@@ -432,9 +434,9 @@
 	   (divs divisors) (splay splay)) spv- spv
     (labels ((mvb (vec rem divs splay)
 	       (let ((q (gensym)) (r (gensym)))
-		 `(let ((v (or ,vec
-			       (setf ,vec ,`(make-array ,(car splay)
-							:initial-element nil)))))
+		 `(let ((v (ensure-array ,vec ,(car splay))
+			   #+nil(or ,vec
+				  (setf ,vec (make-index ,(car splay))))))
 		    (multiple-value-bind (,q ,r)
 			(truncate ,rem ,(car divs))
 		      ;; probably redundant, sbcl could reason this out
@@ -445,24 +447,26 @@
 		      ,(if (cdr divs)
 			   (mvb `(svref v ,q) r (cdr divs) (cdr splay))
 			   `(setf (aref (the (simple-array ,el)
-					     (or (svref v ,q)
-						 (setf (svref v ,q)
-						       (make-array ,(cadr splay)
-								   :initial-element ,ie
-								   :element-type ',el))))
+					     (ensure-array (svref v ,q)
+							   ,(cadr splay)
+							   ',el ,ie))
 					,r)
 				  value)))))))
       (let ((max (1- size)))
 	`(lambda (index value)
-	   (check (index "must be an integer index of this sparse vector")
-	       (typep index '(integer 0 ,max)))
-	   (check (value "must be of the sparse vector element type")
-	       (typep value ',el))
-	   (block nil
-	     (locally
-		 (declare (optimize (speed 3) (safety 0) (space 0))
-			  (type (integer 0 ,max) index))
-	       ,(mvb `(spv-tree ,spv) `index divs splay))))))))
+	   (macrolet ((mkarray (n el ie)
+			`(make-array ,n :element-type ,el :initial-element ,ie))
+		      (ensure-array (form n &optional (el t) (ie nil))
+			`(or ,form (setf ,form (mkarray ,n ,el ,ie)))))
+	     (check (index "must be an integer index of this sparse vector")
+		 (typep index '(integer 0 ,max)))
+	     (check (value "must be of the sparse vector element type")
+		 (typep value ',el))
+	     (block nil
+	       (locally
+		   (declare (optimize (speed 3) (safety 0) (space 0))
+			    (type (integer 0 ,max) index))
+		 ,(mvb `(spv-tree ,spv) `index divs splay)))))))))
 
 
 (macrolet ((make-slice (n) (make-array n :initial-element ,ie))
