@@ -401,8 +401,9 @@
   (let-ss ((ie initial-element) (el element-type) (size size)
 	   (divs divisors) (splay splay)) spv- spv
     (labels ((mvb (vec rem divs splay)
-	       (let ((q (gensym)) (r (gensym)) (v (gensym)))
-		 `(let ((,v (or ,vec (return ,ie))))
+	       (let ((q (gensym)) (r (gensym)) ; (v (gensym))
+		     )
+		 `(let ((v (or ,vec (return ,ie))))
 		    (multiple-value-bind (,q ,r)
 			(truncate ,rem ,(car divs))
 		      ;; probably redundant, sbcl could reason this out
@@ -411,9 +412,9 @@
 		      (declare (type (integer 0 ,(1- (car splay))) ,q)
 			       (type (integer 0 ,(1- (car divs))) ,r))
 		      ,(if (cdr divs)
-			   (mvb `(svref ,v ,q) r (cdr divs) (cdr splay))
+			   (mvb `(svref v ,q) r (cdr divs) (cdr splay))
 			   `(aref (the (simple-array ,el)
-				       (or (svref ,v ,q) (return ,ie)))
+				       (or (svref v ,q) (return ,ie)))
 				  ,r)))))))
       (let ((max (1- size)))
 	`(lambda (index)
