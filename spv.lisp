@@ -74,6 +74,21 @@
     (destructuring-bind (var thing) b
       (push `(,var (,(symb prefix thing) ,obj)) bindings))))
 
+(defmacro let-ss (var-slot-pairs prefix obj &body body)
+  "Similar in concept to WITH-SS, this macro binds a set of variables
+  to known slots from a structure via a LET form, tucking BODY inside
+  that LET form.  Every element of VAR-SLOT-PAIRS has the form (VAR
+  SLOT), naming a variable and the SLOT from which to take its value.
+  PREFIX is whatever needs to be placed in front of SLOT to yield a
+  reader function, and OBJ is the instance of the structure to use."
+  (do* ((vsp var-slot-pairs (cdr vsp))
+        (b (car vsp) (car vsp))
+        (bindings))
+       ((null vsp)
+        `(let ,bindings ,@body))
+    (destructuring-bind (var thing) b
+      (push `(,var (,(symb prefix thing) ,obj)) bindings))))
+
 ;; I originally intentionally avoided conditions, but since we're
 ;; writing code to the CL standard, the condition system is already in
 ;; use, we might as well use it!  Now, since we're switching to
@@ -373,42 +388,57 @@
           (return-from spvref ie))))))
 
 
+;; There are more declarations here than are needed; SBCL can follow
+;; just a few type declarations through sub-expressions and derive the
+;; types along the way.  But, we'll compute and add them anyway, it
+;; might help other compilers too.
+
+(defun maybe (always maybe &rest body)
+  (if maybe
+      (append always (list maybe) body)
+      (append always body)))
 
 (defun gen-get (spv)
+  ;; It isn't important how optimized gen-get is, it's the performance
+  ;; of the code it generates that matters.
+  (declare (optimize (speed 1) (space 1) (safety 1)))
   (labels ((refs (qrlist)
-	     (if (caddr qrlist)
-		 `(svref ,(refs (cddr qrlist)) (car qrlist))
-		 `(svref (spv-tree ,spv) ,(car qrlist))))
-	   (mvb (rem divs &rest qrlist)
+	     (print qrlist)
+	     (if (cddr qrlist)
+		 `(or (svref ,(refs (cddr qrlist)) ,(car qrlist))
+		      (return ,(spv-initial-element spv)))
+		 `(or (svref (spv-tree ,spv) ,(car qrlist))
+		      (return ,(spv-initial-element spv)))))
+	   (mvb (rem divs splay qrlist)
 	     (let ((q (gensym)) (r (gensym)))
 	       `(multiple-value-bind (,q ,r)
 		    (truncate ,rem ,(car divs))
+		  ;; probably redundant, sbcl could reason this out, but
+		  ;; these decls could help other compilers
+		  (declare (type (integer 0 ,(1- (car splay))) ,q)
+			   (type (integer 0 ,(1- (car divs))) ,r))
 		  ,(if (cdr divs)
-		       (mvb r (cdr divs) q r)
-		       `(aref (svref ,(refs qrlist) ,q) ,r))))))
-    `(lambda (index)
-       ,(mvb `index (spv-divisors spv)))))
-
-(lambda (spv index)
-  (multiple-value-bind (q1 r1)
-      (truncate index 65536)
-    (multiple-value-bind (q2 r2)
-	(truncate r1 256)
-      (aref
-       (svref
-	(svref (spv-tree spv) q1)
-	q2)
-       r2)
-    )
-  )
-)
+		       (mvb r (cdr divs) (cdr splay) (append (list q r) qrlist))
+		       `(aref (the (simple-array ,(spv-element-type spv))
+				   (or (svref ,(refs qrlist) ,q)
+				       (return ,(spv-initial-element spv))))
+			      ,r))))))
+    (let ((max (1- (spv-size spv))))
+      `(lambda (index)
+	 (check (index "is not a valid index to this sparse vector")
+	     (<= 0 (the integer index) ,max))
+	 (block nil
+	   (locally
+	       (declare (optimize (speed 3) (safety 0) (space 0))
+			(type (integer 0 ,max) index))
+	     ,(mvb `index (spv-divisors spv) (spv-splay spv) nil))))))))
 
 ;; In its pure form, a "getter" function would look like the
 ;; following.  Here, it's an SPV with a depth of 3, a splay of (17 256
 ;; 256), divisors of (65536 256).  What you see below, with no range
 ;; checks and NIL checks, is about 
 ;; 
-;; (lambda (spv index)
+;; (lambda (index)
 ;;   (multiple-value-bind (q1 r1) (truncate index 65536)
 ;;     (multiple-value-bind (q2 r2) (truncate r1 256)
 ;;       (aref (svref (svref (spv-tree spv) q1) q2) r2))))
@@ -417,7 +447,7 @@
 ;; long (x64), no loops, including dead code for exceptions that won't
 ;; happen.
 ;;
-;; (lambda (spv index)
+;; (lambda (index)
 ;;   (declare (type (integer 0 1114112) index)
 ;;         (type sparse-vector spv)
 ;;         (optimize (speed 3) (safety 0)))
