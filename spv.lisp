@@ -368,6 +368,7 @@
     (map nil #'(lambda (f) (funcall f spv)) *spva-checks*)
     (init-spv spv)))
 
+#+nil
 (defun spvref (spv index)
   (declare (type integer index) (type sparse-vector spv))
   (with-ss ((size size) (tree tree) (ie initial-element) (divisors divisors)
@@ -380,9 +381,7 @@
          (d divisors (cdr d)))
         ((null d)
          (aref v i))
-      (declare (type integer i))
       (multiple-value-bind (q r) (truncate i (car d))
-        (declare (type fixnum q))
         (unless (setf i r
                       v (svref v q))
           (return-from spvref ie))))))
@@ -393,45 +392,43 @@
 ;; types along the way.  But, we'll compute and add them anyway, it
 ;; might help other compilers too.
 
-(defun maybe (always maybe &rest body)
-  (if maybe
-      (append always (list maybe) body)
-      (append always body)))
-
 (defun gen-get (spv)
   ;; It isn't important how optimized gen-get is, it's the performance
-  ;; of the code it generates that matters.
+  ;; of the code it generates that matters.  So, no matter how we're
+  ;; compiling the rest of the package, gen-get gets a quiet and
+  ;; conservative compilation.
   (declare (optimize (speed 1) (space 1) (safety 1)))
-  (labels ((refs (qrlist)
-	     (print qrlist)
-	     (if (cddr qrlist)
-		 `(or (svref ,(refs (cddr qrlist)) ,(car qrlist))
-		      (return ,(spv-initial-element spv)))
-		 `(or (svref (spv-tree ,spv) ,(car qrlist))
-		      (return ,(spv-initial-element spv)))))
-	   (mvb (rem divs splay qrlist)
-	     (let ((q (gensym)) (r (gensym)))
-	       `(multiple-value-bind (,q ,r)
-		    (truncate ,rem ,(car divs))
-		  ;; probably redundant, sbcl could reason this out, but
-		  ;; these decls could help other compilers
-		  (declare (type (integer 0 ,(1- (car splay))) ,q)
-			   (type (integer 0 ,(1- (car divs))) ,r))
-		  ,(if (cdr divs)
-		       (mvb r (cdr divs) (cdr splay) (append (list q r) qrlist))
-		       `(aref (the (simple-array ,(spv-element-type spv))
-				   (or (svref ,(refs qrlist) ,q)
-				       (return ,(spv-initial-element spv))))
-			      ,r))))))
-    (let ((max (1- (spv-size spv))))
-      `(lambda (index)
-	 (check (index "is not a valid index to this sparse vector")
-	     (<= 0 (the integer index) ,max))
-	 (block nil
-	   (locally
-	       (declare (optimize (speed 3) (safety 0) (space 0))
-			(type (integer 0 ,max) index))
-	     ,(mvb `index (spv-divisors spv) (spv-splay spv) nil))))))))
+  (let-ss ((ie initial-element) (el element-type) (size size)
+	   (divs divisors) (splay splay)) spv- spv
+    (labels ((mvb (vec rem divs splay)
+	       (let ((q (gensym)) (r (gensym)) (v (gensym)))
+		 `(let ((,v (or ,vec (return ,ie))))
+		    (multiple-value-bind (,q ,r)
+			(truncate ,rem ,(car divs))
+		      ;; probably redundant, sbcl could reason this out
+		      ;; I suspect, but these decls could help other
+		      ;; compilers
+		      (declare (type (integer 0 ,(1- (car splay))) ,q)
+			       (type (integer 0 ,(1- (car divs))) ,r))
+		      ,(if (cdr divs)
+			   (mvb `(svref ,v ,q) r (cdr divs) (cdr splay))
+			   `(aref (the (simple-array ,el)
+				       (or (svref ,v ,q) (return ,ie)))
+				  ,r)))))))
+      (let ((max (1- size)))
+	`(lambda (index)
+	   (check (index "must be an integer index of this sparse vector")
+	       (typep index '(integer 0 ,max)))
+	   (block nil
+	     (locally
+		 (declare (optimize (speed 3) (safety 0) (space 0))
+			  (type (integer 0 ,max) index))
+	       ,(mvb `(spv-tree ,spv) `index divs splay))))))))
+
+
+(macrolet ((make-slice (n) (make-array n :initial-element ,ie))
+	   (make-index (n) (make-array n :initial-element nil)))
+
 
 ;; In its pure form, a "getter" function would look like the
 ;; following.  Here, it's an SPV with a depth of 3, a splay of (17 256
