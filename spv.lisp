@@ -426,6 +426,44 @@
 			  (type (integer 0 ,max) index))
 	       ,(mvb `(spv-tree ,spv) `index divs splay))))))))
 
+(defun gen-set (spv)
+  (declare (optimize (speed 1) (space 1) (safety 1)))
+  (let-ss ((ie initial-element) (el element-type) (size size)
+	   (divs divisors) (splay splay)) spv- spv
+    (labels ((mvb (vec rem divs splay)
+	       (let ((q (gensym)) (r (gensym)))
+		 `(let ((v (or ,vec
+			       (setf ,vec ,`(make-array ,(car splay)
+							:initial-element nil)))))
+		    (multiple-value-bind (,q ,r)
+			(truncate ,rem ,(car divs))
+		      ;; probably redundant, sbcl could reason this out
+		      ;; I suspect, but these decls could help other
+		      ;; compilers
+		      (declare (type (integer 0 ,(1- (car splay))) ,q)
+			       (type (integer 0 ,(1- (car divs))) ,r))
+		      ,(if (cdr divs)
+			   (mvb `(svref v ,q) r (cdr divs) (cdr splay))
+			   `(setf (aref (the (simple-array ,el)
+					     (or (svref v ,q)
+						 (setf (svref v ,q)
+						       (make-array ,(cadr splay)
+								   :initial-element ,ie
+								   :element-type ',el))))
+					,r)
+				  value)))))))
+      (let ((max (1- size)))
+	`(lambda (index value)
+	   (check (index "must be an integer index of this sparse vector")
+	       (typep index '(integer 0 ,max)))
+	   (check (value "must be of the sparse vector element type")
+	       (typep value ',el))
+	   (block nil
+	     (locally
+		 (declare (optimize (speed 3) (safety 0) (space 0))
+			  (type (integer 0 ,max) index))
+	       ,(mvb `(spv-tree ,spv) `index divs splay))))))))
+
 
 (macrolet ((make-slice (n) (make-array n :initial-element ,ie))
 	   (make-index (n) (make-array n :initial-element nil)))
