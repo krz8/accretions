@@ -93,71 +93,6 @@
     (destructuring-bind (var thing) b
       (push `(,var (,(symb prefix thing) ,obj)) bindings))))
 
-;; I originally intentionally avoided conditions, but since we're
-;; writing code to the CL standard, the condition system is already in
-;; use, we might as well use it!  Now, since we're switching to
-;; signalling conditions, we can get rid of chaining return values
-;; from the various chk- functions.
-
-(define-condition spverr (error)
-  ((name :initarg :name :reader spverr-name)
-   (value :initarg :value :reader spverr-value)
-   (problem :initarg :problem :reader spverr-problem))
-  (:default-initargs :value nil :name "n/a" :problem "n/a")
-  (:report (lambda (condition stream)
-             (format stream "~&SPARSE-VECTOR error: ~A, ~W, ~A."
-                     (spverr-name condition)
-                     (spverr-value condition)
-                     (spverr-problem condition))))
-  (:documentation "Represents error conditions detected within the
-  SPARSE-VECTOR library."))
-
-(defmacro err (place problem)
-  "Signals SPVERR using PROBLEM directly, using PLACE as the VALUE,
-  and the quoted name of PLACE as the NAME in the condition."
-  `(error 'spverr :value ,place :name ',place :problem ,problem))
-
-(defmacro check ((place problem) expr)
-  "If EXPR fails, signal an SPVERR condition using PLACE and PROBLEM
-  as described in ERR.  Kind of like a decorated ASSERT."
-  `(unless ,expr
-     (err ,place ,problem)))
-
-(defmacro cerr (place problem)
-  "Signal a correctable SPVERR condition, using the quoted and plain
-  forms of PLACE as its NAME and VALUE, and using PROBLEM as its
-  same."
-  (let ((restart (mkstr "Supply a new " place ".")))
-    `(cerror ,restart 'spverr :value ,place :name ',place :problem ,problem)))
-
-(defmacro ccheck ((place problem &optional (readvar 'input)) expr &body body)
-  "Used to ensure an expression, EXPR, is true.  Until EXPR is true,
-  a condition describing the problem is raised via CERROR.  If the
-  user chooses to continue past the condition, input is solicited to
-  address the problem, BODY is evaluated to fix the condition, and
-  EXPR is tested again.  This continues until the expression passes or
-  the user chooses not to continue past the signalled condition.
-
-  PLACE is a form that has the problem described in the string
-  PROBLEM.  When a new expression is solicited from the user, it is
-  bound to the variable named by READVAR; if omitted, INPUT is used by
-  default (take care if crossing package boundaries).  With this
-  binding in place, BODY is then evaluated \(typically to \"fix\" the
-  problem\), and then the loop begins anew.
-
-  .Example of using CCHECK
-      (ccheck (foo \"must be even\")
-          (evenp foo)
-        (setf foo input))"
-  `(until ,expr
-     (cerr ,place ,problem)
-     (fresh-line)
-     (princ ,(mkstr "Enter a new " place ": "))
-     (let ((,readvar (read)))
-       (declare (ignorable ,readvar))
-       (fresh-line)
-       ,@body)))
-
 (defun iroot (x n)
   "Returns the nearest integer equal to OR GREATER THAN the actual Nth
   root of X.  A secondary return value is the difference between the
@@ -199,18 +134,18 @@
   `(with-ss ,var-slot-pairs spva- ,obj ,@body))
 
 (defun confirm-splay (spva)
-  "Signals SPVERR condition when the vector tree splay specifiers make
+  "Signals ERROR condition when the vector tree splay specifiers make
   sense.  The return value is unimportant; if the function returns,
   processing can continue."
   (with-spva ((size size) (splay splay)) spva
-    (flet ((good-element (x) (and (integerp x) (<= 2 x array-dimension-limit)))
-           (good-size () (< (apply #'* splay) *size-limit*)))
-      (ccheck (splay "must be a list of integers > 1")
-          (and (consp splay) (every #'good-element splay))
-        (setf splay input))
-      (ccheck (splay "must yield a size < *SIZE-LIMIT*")
-          (good-size)
-        (setf splay input)))
+    (flet ((good-element (x) (and (integerp x) (<= 2 x array-dimension-limit))))
+      (assert (and (consp splay)
+		   (every #'good-element splay)
+		   (< (apply #'* splay) *size-limit*))
+	      (splay)
+	      "The splay list ~w must be a list of integers, each ~
+              [2,~d], such that the resulting total size is ~
+              less than ~d." splay array-dimension-limit *size-limit*))
     (setf size (apply #'* splay))))
 
 (defun solve-splay (spva)
@@ -255,9 +190,9 @@
     (if (listp size)
         (setf splay size
               size 0)
-        (ccheck (size "must be a positive integer")
-            (and (integerp size) (plusp size))
-          (setf size input)))))
+	(assert (and (integerp size) (plusp size)) (size)
+		"The size ~w of a sparse vector must be a ~
+                positive integer." size))))
 
 (defun chk-initial-element (spva)
   "When the INITIAL-ELEMENT of a SPARSE-VECTOR is specified, ensure
@@ -271,9 +206,10 @@
     (if (not iep)
         (setf initial-element (and (subtypep element-type 'number)
                                    (coerce 0 element-type)))
-        (ccheck (element-type "must match the ELEMENT-TYPE")
-            (typep initial-element element-type)
-          (setf initial-element input)))))
+	(assert (typep initial-element element-type)
+		(initial-element)
+		"The INITIAL-ELEMENT ~w must be of the ELEMENT-TYPE ~w."
+		initial-element element-type))))
 
 (defun chk-element-type (spva)
   "Check that the element type we've been given is valid.  This
@@ -281,9 +217,9 @@
   errors.  The return value is unimportant; if the function returns,
   processing can continue."
   (with-spva ((element-type element-type)) spva
-    (ccheck (element-type "must be a plausible type specifier")
-        (and element-type (subtypep element-type t))
-      (setf element-type input))))
+    (assert (and element-type (subtypep element-type t))
+	    (element-type)
+	    "The ELEMENT-TYPE must be a plausible type specifier.")))
 
 (defun spv-print (object stream)
   "Used when a SPARSE-VECTOR lands in the Printer's lap.  We don't do
@@ -368,8 +304,9 @@
 				  ,r)))))))
       (let ((max (1- size)))
 	`(lambda (index)
-	   (check (index "must be an integer index of this sparse vector")
-	       (typep index '(integer 0 ,max)))
+	   (assert (typep index '(integer 0 ,max)) (index)
+		   "The INDEX ~w must be an integer smaller than ~
+                   the SIZE ~w." index ,size)
 	   (block nil
 	     (locally
 		 (declare (type (integer 0 ,max) index))
@@ -404,8 +341,9 @@
 			`(make-array ,n :element-type ,el :initial-element ,ie))
 		      (ensure-array (form n &optional (el t) (ie nil))
 			`(or ,form (setf ,form (mkarray ,n ,el ,ie)))))
-	     (check (index "must be an integer index of this sparse vector")
-		 (typep index '(integer 0 ,max)))
+	     (assert (typep index '(integer 0 ,max)) (index)
+		     "The INDEX ~w must be an integer smaller than ~
+                     the SIZE ~w." index ,size)
 	     ,(unless (eq el t)
 		`(check (value "must be of the sparse vector element type")
 		     (typep value ',el)))
@@ -417,7 +355,7 @@
 (defparameter *spva-checks* (list #'chk-element-type #'chk-initial-element
                                   #'chk-size #'chk-splay)
   "A list of functions to be called to validate an SPV argument
-  structure.  Each function is expected to signal an SPVERR condition
+  structure.  Each function is expected to signal an ERROR condition
   when detecting an error.  Once all functions return, processing
   should continue, considering the SPV-ARGS structure they were passed
   to now be safe and valid.")
