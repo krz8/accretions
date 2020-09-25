@@ -8,7 +8,7 @@
   (print "executing spv"))
 
 (defpackage :accretions/spv
-  (:use #:cl #:alexandria)
+  (:use #:cl #:cl-environments)
   (:export #:*error*
            ;; #:sparse-vector #:make-sparse-vector #:make-spv #:spvref
            ))
@@ -16,13 +16,10 @@
 
 (defparameter *max-vector-sizes* `(500 2000 8000 32000)
   "When we solve a splay for a given size, this parameter represents
-  the maximum size of any vector in our tree.  We have a set of
-  values, corresponding to a :SPEED parameter of 0-3, where:
-
-  . 0: Space is much more important than speed.
-  . 1: The default, where space is more important than speed.
-  . 2: Speed is more important than space.
-  . 3: Speed is of utmost importance, space is irrelevant.")
+  the maximum size of any vector in our tree.  We have a set of values
+  that are used when MAKE-SPARSE-VECTOR is called.  The value is
+  chosen at runtime, based on the current value of the SPEED attribute
+  of the currently OPTIMIZE declaration in the environment.")
 
 (defparameter *size-limit* (expt 10 67)
   "The largest sparse vector we'll support.  It's tempting to make
@@ -51,6 +48,13 @@
   "Common function that returns a new symbol that is the concatenation
   of all arguments. (symb 'foo \"bar\" 12) → FOOBAR12"
   (values (intern (apply #'mkstr args))))
+
+(defun get-speed ()
+  "Returns the SPEED attribute of the current OPTIMIZE declared in the
+  environment.  If no such information can be found, 1 is returned."
+  (or (cadr (assoc 'speed (cl-environments:declaration-information
+			   'optimize)))
+      1))
 
 (defmacro with-ss (var-slot-pairs prefix obj &body body)
   "WITH-SLOTS is not specified to work with structure, per the
@@ -158,7 +162,8 @@
   "Returns the nearest integer equal to OR GREATER THAN the actual Nth
   root of X.  A secondary return value is the difference between the
   returned integer and the actual root.  Errors are trapped and zero
-  is returned instead."
+  is returned instead.  Both X and N must be positive integers."
+  (declare (type (integer 1 *) x n))
   (handler-case (ceiling (expt x (/ 1 n)))
     (error (condition) (declare (ignore condition)) (values 0 0.0))))
 
@@ -186,14 +191,7 @@
   ;; whose value is assumed for all elements in the sparse vector
   ;; until otherwise set.
   (initial-element nil)
-  (initial-element-p nil)
-  ;; The caller can tell us that speed is more important than space in
-  ;; our sparse vector.  Generally, this will widen any splay tree we
-  ;; compute, causing it to be less deep.  By default, we make things
-  ;; as tiny as we can, in a simple-minded way, at the cost of speed
-  ;; (but I still think we can beat list- and hash-based sparse
-  ;; vectors).  0 <= speed <= 3
-  (speed 1))
+  (initial-element-p nil))
 
 (defmacro with-spva (var-slot-pairs obj &body body)
   "Wraps WITH-SS with SPVA- as the prefix to all slot access
@@ -220,13 +218,14 @@
   space/speed tradeoffs, determine a splay arrangement for the sparse
   vector.  The return value is unimportant; if the function returns,
   processing can continue."
-  (with-spva ((splay splay) (size size) (speed speed)) spva
-    (do* ((max   (nth speed *max-vector-sizes*))
-	  (depth 2                              (1+ depth))
-	  (x     (iroot size depth)             (iroot size depth)))
-	 ((and (plusp x) (<= x max))	; the plusp catches errors
-	  (setf splay (make-list depth :initial-element x))
-	  spva))))
+  (let ((speed (get-speed)))
+    (with-spva ((splay splay) (size size)) spva
+	    (do* ((max   (nth speed *max-vector-sizes*))
+		  (depth 2                              (1+ depth))
+		  (x     (iroot size depth)             (iroot size depth)))
+		 ((and (plusp x) (<= x max)) ; the plusp catches iroot errors
+		  (setf splay (make-list depth :initial-element x))
+		  spva)))))
 
 (defun chk-splay (spva)
   "Checks a splay tree described in the supplied spv-args, or computes
@@ -259,15 +258,6 @@
         (ccheck (size "must be a positive integer")
             (and (integerp size) (plusp size))
           (setf size input)))))
-
-(defun chk-speed (spva)
-  "Ensures that the SPEED supplied to MAKE-SPARSE-VECTOR was
-  plausible.  The return value is unimportant; if the function
-  returns, processing can continue."
-  (with-spva ((speed speed)) spva
-    (ccheck (speed "must be an integer [0,3]")
-        (and (integerp speed) (<= 0 speed 3))
-      (setf speed input))))
 
 (defun chk-initial-element (spva)
   "When the INITIAL-ELEMENT of a SPARSE-VECTOR is specified, ensure
@@ -358,7 +348,6 @@
   ;; of the code it generates that matters.  So, no matter how we're
   ;; compiling the rest of the package, gen-get gets a quiet and
   ;; conservative compilation.
-  (declare (optimize (speed 1) (space 1) (safety 1)))
   (let-ss ((ie initial-element) (el element-type) (size size)
 	   (divs divisors) (splay splay)) spv- spv
     (labels ((mvb (vec rem divs splay)
@@ -383,12 +372,10 @@
 	       (typep index '(integer 0 ,max)))
 	   (block nil
 	     (locally
-		 (declare (optimize (speed 3) (safety 0) (space 0))
-			  (type (integer 0 ,max) index))
+		 (declare (type (integer 0 ,max) index))
 	       ,(mvb `(spv-tree ,spv) `index divs splay))))))))
 
 (defun gen-set (spv)
-  (declare (optimize (speed 1) (space 1) (safety 1)))
   (let-ss ((ie initial-element) (el element-type) (size size)
 	   (divs divisors) (splay splay)) spv- spv
     (labels ((mvb (vec rem divs splay)
@@ -424,12 +411,11 @@
 		     (typep value ',el)))
 	     (block nil
 	       (locally
-		   (declare (optimize (speed 3) (safety 0) (space 0))
-			    (type (integer 0 ,max) index))
+		   (declare (type (integer 0 ,max) index))
 		 ,(mvb `(spv-tree ,spv) `index divs splay)))))))))
 
 (defparameter *spva-checks* (list #'chk-element-type #'chk-initial-element
-                                  #'chk-speed #'chk-size #'chk-splay)
+                                  #'chk-size #'chk-splay)
   "A list of functions to be called to validate an SPV argument
   structure.  Each function is expected to signal an SPVERR condition
   when detecting an error.  Once all functions return, processing
@@ -464,7 +450,7 @@
 (defsetf spvref spvset)
 
 (defun make-sparse-vector (size-or-splay
-                           &key (element-type t) (speed 1)
+                           &key (element-type t)
                              (initial-element nil initial-element-p))
   "Creates and returns a new SPARSE-VECTOR according to the supplied
   arguments, or NIL if there is some error.  Errors are typically
@@ -497,7 +483,6 @@
   ELEMENT-TYPE, but an INITIAL-VALUE is not specified, a zero of
   ELEMENT-TYPE made the initial value."
   (let ((spv (make-spv :size size-or-splay
-                       :speed speed
                        :element-type element-type
                        :initial-element initial-element
                        :initial-element-p initial-element-p)))
