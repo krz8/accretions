@@ -11,6 +11,8 @@
   (:use #:cl #:cl-environments)
   (:export #:sparse-vector #:make-sparse-vector #:spvref #:spvset
 	   #:gen-get #:gen-set #:*max-vector-sizes* #:*size-limit*))
+(defpackage :accretions/spv-user
+  (:use #:cl #:accretions/spv))
 (in-package :accretions/spv)
 
 (defparameter *max-vector-sizes* '(25000 2500 250 25)
@@ -335,13 +337,13 @@
 	   ;; during general use, so it's no significant performance
 	   ;; hit.
 	   (readfmt
-	    "((formx (form)
+	    "((~w (form)
                 `(or ,form (return ~w)))
-              (form1 (form)
+              (~w (form)
                 `(or ,form (return ~w)))
-              (form0 (a i)
+              (~w (a i)
                 `(aref (the (simple-array ~w) ,a) ,i)))"
-	    ie ie el)))
+	    'formx ie 'form1 ie 'form0 el)))
     (make-drill spv '(index) macros)))
 
 (defun gen-set (spv)
@@ -355,14 +357,14 @@
 	   ;; during general use, so it's no significant performance
 	   ;; hit.
 	   (readfmt
-	    "((formx (form)
-                `(or ,form (setf ,form (make-array w))))
-              (form1 (form)
-                `(or ,form (setf ,form (make-array w :element-type '~w
+	    "((~w (form)
+                `(or ,form (setf ,form (make-array ~w))))
+              (~w (form)
+                `(or ,form (setf ,form (make-array ~w :element-type '~w
                                                 :initial-element ~w))))
-              (form0 (a i)
-                `(setf (aref (the (simple-array ~w) ,a) ,i) value)))"
-	    el ie el)))
+              (~w (a i)
+                `(setf (aref (the (simple-array ~w) ,a) ,i) ~w)))"
+	    'formx 'w 'form1 'w el ie 'form0 el 'value)))
     (make-drill spv '(index value) macros)))
 
 (defparameter *spva-checks* (list #'chk-element-type
