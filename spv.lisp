@@ -9,7 +9,8 @@
 
 (defpackage :accretions/spv
   (:use #:cl #:cl-environments)
-  (:export #:sparse-vector #:make-sparse-vector #:spvref #:spvset))
+  (:export #:sparse-vector #:make-sparse-vector #:spvref #:spvset
+	   #:gen-get #:gen-set #:*max-vector-sizes* #:*size-limit*))
 (in-package :accretions/spv)
 
 (defparameter *max-vector-sizes* '(25000 2500 250 25)
@@ -20,7 +21,8 @@
   of the OPTIMIZE declaration in the environment; yes, that means
   sparse vectors with different runtime characteristics can be
   generated simply by changing the OPTIMIZE declaration in effect when
-  MAKE-SPARSE-VECTOR is run (compile time has no bearing on this).")
+  MAKE-SPARSE-VECTOR is run (in other words, compile time has no
+  bearing on the selection of index and slice sizes).")
 
 (defparameter *size-limit* (expt 10 67)
   "The largest sparse vector we'll support.  It's tempting to make
