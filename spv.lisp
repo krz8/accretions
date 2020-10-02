@@ -9,17 +9,18 @@
 
 (defpackage :accretions/spv
   (:use #:cl #:cl-environments)
-  (:export #:*error*
-           ;; #:sparse-vector #:make-sparse-vector #:make-spv #:spvref
-           ))
+  (:export #:sparse-vector #:make-sparse-vector #:spvref #:spvset))
 (in-package :accretions/spv)
 
-(defparameter *max-vector-sizes* `(500 2000 8000 32000)
+(defparameter *max-vector-sizes* '(25000 2500 250 25)
   "When we solve a splay for a given size, this parameter represents
   the maximum size of any vector in our tree.  We have a set of values
   that are used when MAKE-SPARSE-VECTOR is called.  The value is
-  chosen at runtime, based on the current value of the SPEED attribute
-  of the currently OPTIMIZE declaration in the environment.")
+  chosen at runtime, based on the current value of the SPACE attribute
+  of the OPTIMIZE declaration in the environment; yes, that means
+  sparse vectors with different runtime characteristics can be
+  generated simply by changing the OPTIMIZE declaration in effect when
+  MAKE-SPARSE-VECTOR is run (compile time has no bearing on this).")
 
 (defparameter *size-limit* (expt 10 67)
   "The largest sparse vector we'll support.  It's tempting to make
@@ -37,23 +38,29 @@
          (,e)
        ,@body)))
 
-(defun mkstr (&rest args)
-  "Common function that turns all arguments into strings, concatenates
-  them, and returns the new string."
-  (with-output-to-string (s)
-    (let ((*standard-output* s))
-      (map nil #'princ args))))
+(eval-when (:compile-toplevel :load-toplevel :execute)
+  (defun mkstr (&rest args)
+    "Common function that turns all arguments into strings, concatenates
+    them, and returns the new string."
+    (with-output-to-string (s)
+      (let ((*standard-output* s))
+	(map nil #'princ args))))
 
-(defun symb (&rest args)
-  "Common function that returns a new symbol that is the concatenation
-  of all arguments. (symb 'foo \"bar\" 12) → FOOBAR12"
-  (values (intern (apply #'mkstr args))))
+  (defun symb (&rest args)
+    "Common function that returns a new symbol that is the concatenation
+    of all arguments. (symb 'foo \"bar\" 12) → FOOBAR12"
+    (values (intern (apply #'mkstr args))))
 
-(defun get-speed ()
-  "Returns the SPEED attribute of the current OPTIMIZE declared in the
-  environment.  If no such information can be found, 1 is returned."
-  (or (cadr (assoc 'speed (cl-environments:declaration-information
-			   'optimize)))
+  (defun readfmt (fmt &rest args)
+    "READ a string created by calling the formatter on the supplied
+    arguments."
+    (read-from-string (apply #'format nil fmt args))))
+
+(defun get-opt (which)
+  "Returns the current optimization declared in the environment for
+  WHAT, which may be one of SPEED SPACE SAFETY or DEBUG."
+  (or (cadr (assoc which (cl-environments:declaration-information
+			  'optimize)))
       1))
 
 (defmacro with-ss (var-slot-pairs prefix obj &body body)
@@ -134,7 +141,7 @@
   `(with-ss ,var-slot-pairs spva- ,obj ,@body))
 
 (defun confirm-splay (spva)
-  "Signals ERROR condition when the vector tree splay specifiers make
+  "Signals ERROR condition unless the vector tree splay specifiers make
   sense.  The return value is unimportant; if the function returns,
   processing can continue."
   (with-spva ((size size) (splay splay)) spva
@@ -143,7 +150,7 @@
 		   (every #'good-element splay)
 		   (< (apply #'* splay) *size-limit*))
 	      (splay)
-	      "The splay list ~w must be a list of integers, each ~
+	      "The splay list, ~w, must be a list of integers, each ~
               [2,~d], such that the resulting total size is ~
               less than ~d." splay array-dimension-limit *size-limit*))
     (setf size (apply #'* splay))))
@@ -153,12 +160,13 @@
   space/speed tradeoffs, determine a splay arrangement for the sparse
   vector.  The return value is unimportant; if the function returns,
   processing can continue."
-  (let ((speed (get-speed)))
+  (let ((space (get-opt 'space)))
     (with-spva ((splay splay) (size size)) spva
-	    (do* ((max   (nth speed *max-vector-sizes*))
-		  (depth 2                              (1+ depth))
-		  (x     (iroot size depth)             (iroot size depth)))
-		 ((and (plusp x) (<= x max)) ; the plusp catches iroot errors
+	    (do* ((max (nth space *max-vector-sizes*))
+		  (depth 2 (1+ depth))
+		  (x (iroot size depth) (iroot size depth)))
+		 ;; the plusp catches iroot errors
+		 ((and (plusp x) (<= x max))
 		  (setf splay (make-list depth :initial-element x))
 		  spva)))))
 
@@ -191,7 +199,7 @@
         (setf splay size
               size 0)
 	(assert (and (integerp size) (plusp size)) (size)
-		"The size ~w of a sparse vector must be a ~
+		"The size, ~w, of a sparse vector must be a ~
                 positive integer." size))))
 
 (defun chk-initial-element (spva)
@@ -208,7 +216,8 @@
                                    (coerce 0 element-type)))
 	(assert (typep initial-element element-type)
 		(initial-element)
-		"The INITIAL-ELEMENT ~w must be of the ELEMENT-TYPE ~w."
+		"The INITIAL-ELEMENT, ~w, must be of the ELEMENT-TYPE, ~
+                ~w."
 		initial-element element-type))))
 
 (defun chk-element-type (spva)
@@ -219,7 +228,8 @@
   (with-spva ((element-type element-type)) spva
     (assert (and element-type (subtypep element-type t))
 	    (element-type)
-	    "The ELEMENT-TYPE must be a plausible type specifier.")))
+	    "The ELEMENT-TYPE, ~w, must be a plausible type specifier."
+	    element-type)))
 
 (defun spv-print (object stream)
   "Used when a SPARSE-VECTOR lands in the Printer's lap.  We don't do
@@ -229,8 +239,8 @@
   ridiculously long size slots, and so on."
   (print-unreadable-object (object stream :type t :identity t)))
 
-(defstruct (sparse-vector (:include spv-args) (:conc-name spv-)
-                          (:constructor make-spv) (:print-object spv-print))
+(defstruct (sparse-vector (:include spv-args) (:constructor make-spv)
+                          (:conc-name spv-) (:print-object spv-print))
   ;; The tree of vectors:  "top index" #( - o - - - - - - - o - …)
   ;;                                        |               |
   ;;                        "other indexes" #(- - o - …)    #(…)
@@ -251,114 +261,115 @@
   ;; and remainder (for use as an index at the next level).
   (divisors nil)
   ;; Fast functions compiled just for this particular sparse vector.
-  ;; No loops, embedded context, straight line code.  Ugly and brute,
-  ;; but it works.
-  (getter nil)
-  (setter nil))
+  (get nil)
+  (set nil))
 
-#+nil
-(defun spvref (spv index)
-  (declare (type integer index) (type sparse-vector spv))
-  (with-ss ((size size) (tree tree) (ie initial-element) (divisors divisors)
-            (et element-type))
-      spv- spv
-    (check (index "must be a valid index of the sparse vector")
-        (<= 0 index size))
-    (do ((i index)
-         (v tree)
-         (d divisors (cdr d)))
-        ((null d)
-         (aref v i))
-      (multiple-value-bind (q r) (truncate i (car d))
-        (unless (setf i r
-                      v (svref v q))
-          (return-from spvref ie))))))
+;;; There are more declarations here than are needed in the various
+;;; drill functions; SBCL can follow just a few type declarations
+;;; through sub-expressions and derive the types along the way.  But,
+;;; we'll compute and add them anyway, it might help other compilers
+;;; too.
 
-;; There are more declarations here than are needed; SBCL can follow
-;; just a few type declarations through sub-expressions and derive the
-;; types along the way.  But, we'll compute and add them anyway, it
-;; might help other compilers too.
+(defun make-drill% (vec remainder divisors splay)
+  "Returns the main unrolled body of a function that accesses a sparse
+  vector at runtime.  Call this with VEC as a form to access the root
+  of the vector tree, REMAINDER as the initial INDEX into the sparse
+  vector, and DIVISORS and SPLAY as the respective lists from the
+  sparse vector itself."
+  `(let* ((w ,(car splay)) (v (formx ,vec)))
+     (declare (ignorable w))
+     (multiple-value-bind (q r)
+	 (truncate ,remainder ,(car divisors))
+       ;; Probably redundant, sbcl could reason this out I suspect.
+       ;; Still, these decls could help other compilers.
+       (declare (type (integer 0 ,(1- (car splay))) q)
+		(type (integer 0 ,(1- (car divisors))) r))
+       ,(if (cdr divisors)
+	    (make-drill% `(svref v q) 'r (cdr divisors) (cdr splay))
+	    `(let* ((w ,(cadr splay)) (v (form1 (svref v q))))
+	       (declare (ignorable w))
+	       (form0 v r))))))
 
-(defun gen-get (spv)
-  ;; It isn't important how optimized gen-get is, it's the performance
-  ;; of the code it generates that matters.  So, no matter how we're
-  ;; compiling the rest of the package, gen-get gets a quiet and
-  ;; conservative compilation.
-  (let-ss ((ie initial-element) (el element-type) (size size)
-	   (divs divisors) (splay splay)) spv- spv
-    (labels ((mvb (vec rem divs splay)
-	       (let ((q (gensym)) (r (gensym)) ; (v (gensym))
-		     )
-		 `(let ((v (or ,vec (return ,ie))))
-		    (multiple-value-bind (,q ,r)
-			(truncate ,rem ,(car divs))
-		      ;; probably redundant, sbcl could reason this out
-		      ;; I suspect, but these decls could help other
-		      ;; compilers
-		      (declare (type (integer 0 ,(1- (car splay))) ,q)
-			       (type (integer 0 ,(1- (car divs))) ,r))
-		      ,(if (cdr divs)
-			   (mvb `(svref v ,q) r (cdr divs) (cdr splay))
-			   `(aref (the (simple-array ,el)
-				       (or (svref v ,q) (return ,ie)))
-				  ,r)))))))
-      (let ((max (1- size)))
-	`(lambda (index)
-	   (assert (typep index '(integer 0 ,max)) (index)
-		   "The INDEX ~w must be an integer smaller than ~
-                   the SIZE ~w." index ,size)
+(defun make-drill (spv argform macros)
+  "Returns a list that is a lambda expression which \"drills\" down
+  into the vector tree of a supplied sparse vector.  ARGFORM is a list
+  of one or two names, providing the argument list to this lambda.
+  MACROS should be a list of macro definitions (as would be supplied
+  to MACROLET) which support customization of the MAKE-DRILL% function
+  for read or write access to the vector tree."
+  (let* ((sz (spv-size spv)) (max (1- sz)))
+    (destructuring-bind (idx &optional val &rest dummy) argform
+      (declare (ignore dummy) (ignorable val))
+      `(lambda ,argform
+	 (macrolet ,macros
+	   ,(when (plusp (get-opt 'safety))
+	      `(assert (typep ,idx '(integer 0 ,max)) (,idx)
+		       "The INDEX, ~w, to this sparse vector must be ~
+                       an integer [0,~d]." ,idx ,sz))
 	   (block nil
 	     (locally
-		 (declare (type (integer 0 ,max) index))
-	       ,(mvb `(spv-tree ,spv) `index divs splay))))))))
+		 (declare (type (integer 0 ,max) ,idx))
+	       ;; Divisors and splay lists are evaluated now, as the
+	       ;; lambda is being built, because they're short.  We
+	       ;; could do the same with the tree itself, capturing
+	       ;; the tree into the environment instead of SPV itself,
+	       ;; and instead of forcing a slot access at runtime.
+	       ;; So, why do it this way?  It lets us keep the slot
+	       ;; itself NIL until it's needed, allowing the first
+	       ;; FORMX on (SPV-TREE x) can be setf like all the
+	       ;; others.  If we evaluated it now, we'd just wind up
+	       ;; with a NIL and not a vector.
+	       ,(make-drill% `(spv-tree ,spv) idx (spv-divisors spv)
+			     (spv-splay spv)))))))))
+
+(defun gen-get (spv)
+  "Returns a list that is a lambda expression embodying read access to
+  the supplied SPARSE-VECTOR."
+  (let* ((ie (spv-initial-element spv)) (el (spv-element-type spv))
+	 (macros
+	   ;; I will probably never get nested backquotes right, so
+	   ;; I'll settle for string hacking for now.  This is only
+	   ;; invoked during the creation of a sparse vector, and not
+	   ;; during general use, so it's no significant performance
+	   ;; hit.
+	   (readfmt
+	    "((formx (form)
+                `(or ,form (return ~w)))
+              (form1 (form)
+                `(or ,form (return ~w)))
+              (form0 (a i)
+                `(aref (the (simple-array ~w) ,a) ,i)))"
+	    ie ie el)))
+    (make-drill spv '(index) macros)))
 
 (defun gen-set (spv)
-  (let-ss ((ie initial-element) (el element-type) (size size)
-	   (divs divisors) (splay splay)) spv- spv
-    (labels ((mvb (vec rem divs splay)
-	       (let ((q (gensym)) (r (gensym)))
-		 `(let ((v (ensure-array ,vec ,(car splay))
-			   #+nil(or ,vec
-				  (setf ,vec (make-index ,(car splay))))))
-		    (multiple-value-bind (,q ,r)
-			(truncate ,rem ,(car divs))
-		      ;; probably redundant, sbcl could reason this out
-		      ;; I suspect, but these decls could help other
-		      ;; compilers
-		      (declare (type (integer 0 ,(1- (car splay))) ,q)
-			       (type (integer 0 ,(1- (car divs))) ,r))
-		      ,(if (cdr divs)
-			   (mvb `(svref v ,q) r (cdr divs) (cdr splay))
-			   `(setf (aref (the (simple-array ,el)
-					     (ensure-array (svref v ,q)
-							   ,(cadr splay)
-							   ',el ,ie))
-					,r)
-				  value)))))))
-      (let ((max (1- size)))
-	`(lambda (index value)
-	   (macrolet ((mkarray (n el ie)
-			`(make-array ,n :element-type ,el :initial-element ,ie))
-		      (ensure-array (form n &optional (el t) (ie nil))
-			`(or ,form (setf ,form (mkarray ,n ,el ,ie)))))
-	     (assert (typep index '(integer 0 ,max)) (index)
-		     "The INDEX ~w must be an integer smaller than ~
-                     the SIZE ~w." index ,size)
-	     ,(unless (eq el t)
-		`(check (value "must be of the sparse vector element type")
-		     (typep value ',el)))
-	     (block nil
-	       (locally
-		   (declare (type (integer 0 ,max) index))
-		 ,(mvb `(spv-tree ,spv) `index divs splay)))))))))
+  "Returns a list that is a lambda expression embodying write access
+  to the supplied SPARSE-VECTOR."
+  (let* ((ie (spv-initial-element spv)) (el (spv-element-type spv))	
+	 (macros
+	   ;; I will probably never get nested backquotes right, so
+	   ;; I'll settle for string hacking for now.  This is only
+	   ;; invoked during the creation of a sparse vector, and not
+	   ;; during general use, so it's no significant performance
+	   ;; hit.
+	   (readfmt
+	    "((formx (form)
+                `(or ,form (setf ,form (make-array w))))
+              (form1 (form)
+                `(or ,form (setf ,form (make-array w :element-type '~w
+                                                :initial-element ~w))))
+              (form0 (a i)
+                `(setf (aref (the (simple-array ~w) ,a) ,i) value)))"
+	    el ie el)))
+    (make-drill spv '(index value) macros)))
 
-(defparameter *spva-checks* (list #'chk-element-type #'chk-initial-element
-                                  #'chk-size #'chk-splay)
+(defparameter *spva-checks* (list #'chk-element-type
+				  #'chk-initial-element #'chk-size
+				  #'chk-splay)
   "A list of functions to be called to validate an SPV argument
   structure.  Each function is expected to signal an ERROR condition
-  when detecting an error.  Once all functions return, processing
-  should continue, considering the SPV-ARGS structure they were passed
-  to now be safe and valid.")
+  when detecting a problem.  Once all functions return, creation of a
+  new sparse vector should continue, as SPV-ARGS is safe and valid.")
 
 (defun init-spv (spv)
   "Given a new SPARSE-VECTOR, whose argument-driven fields have all
@@ -366,26 +377,15 @@
   list and compiling the acccessor functions.  Returns the
   SPARSE-VECTOR, ready for use."
   (with-ss ((splay splay) (size size) (tree tree) (divs divisors)
-	    (setter setter) (getter getter)) spv- spv
+	    (set set) (get get)) spv- spv
     (let ((sz size))
-      (setf tree (make-array (car splay) :initial-element nil)
+      (setf tree nil #+nil (make-array (car splay) :initial-element nil)
             divs (butlast (mapcar #'(lambda (len)
                                       (setf sz (ceiling (/ sz len))))
                                   splay))
-	    getter (compile nil (gen-get spv))
-	    setter (compile nil (gen-set spv)))))
+	    get (compile nil (gen-get spv))
+	    set (compile nil (gen-set spv)))))
   spv)
-
-(defun spvref (spv idx)
-  "Return the element at IDX in the supplied sparse vector."
-  (funcall (spv-getter spv) idx))
-
-(defun spvset (spv idx val)
-  "Set the element at IDX in the supplied sparse vector to VAL.
-  Returns VAL."
-  (funcall (spv-setter spv) idx val))
-
-(defsetf spvref spvset)
 
 (defun make-sparse-vector (size-or-splay
                            &key (element-type t)
@@ -427,7 +427,12 @@
     (map nil #'(lambda (f) (funcall f spv)) *spva-checks*)
     (init-spv spv)))
 
-;; Local Variables:
-;; eval: (put 'ccheck 'common-lisp-indent-function '(&lambda 4 &body))
-;; eval: (put 'check 'common-lisp-indent-function '(&lambda 4))
-;; End:
+(defun spvref (spv index)
+  "Return the INDEXth element of the supplied sparse vector."
+  (funcall (spv-get spv) index))
+
+(defun spvset (spv index value)
+  "Sets the INDEXth element of the supplied sparse vector to VALUE."
+  (funcall (spv-set spv) index value))
+
+(defsetf spvref spvset)
