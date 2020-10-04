@@ -1,18 +1,14 @@
 ;;;; sparse vectors
 
-(eval-when (:compile-toplevel)
-  (print "compiling spv"))
-(eval-when (:load-toplevel)
-  (print "loading spv"))
-(eval-when (:execute)
-  (print "executing spv"))
+(eval-when (:compile-toplevel) (print "compiling spv"))
+(eval-when (:load-toplevel)    (print "loading spv"))
+(eval-when (:execute)          (print "executing spv"))
 
 (defpackage :accretions/spv
-  (:use #:cl #:cl-environments)
+  (:use #:cl #:cl-environments #:accretions/misc)
   (:export #:sparse-vector #:make-sparse-vector #:spvref #:spvset
+	   #:spvp
 	   #:gen-get #:gen-set #:*max-vector-sizes* #:*size-limit*))
-(defpackage :accretions/spv-user
-  (:use #:cl #:accretions/spv))
 (in-package :accretions/spv)
 
 (defparameter *max-vector-sizes* '(25000 2500 250 25)
@@ -31,41 +27,6 @@
   this enormous, but this value is used to keep the depth of a vector
   tree from growing out of control, so try to keep it to something
   necessary.")
-
-(defmacro until (expr &body body)
-  "Create a DO loop that evaluates BODY so long as EXPR tests false.
-  Returns NIL once EXPR passes.  EXPR is tested before BODY is
-  evaluated on every loop.  UNTIL is the inverse of a traditional
-  WHILE loop."
-  (let ((e (gensym)))
-    `(do ((,e ,expr ,expr))
-         (,e)
-       ,@body)))
-
-(eval-when (:compile-toplevel :load-toplevel :execute)
-  (defun mkstr (&rest args)
-    "Common function that turns all arguments into strings, concatenates
-    them, and returns the new string."
-    (with-output-to-string (s)
-      (let ((*standard-output* s))
-	(map nil #'princ args))))
-
-  (defun symb (&rest args)
-    "Common function that returns a new symbol that is the concatenation
-    of all arguments. (symb 'foo \"bar\" 12) → FOOBAR12"
-    (values (intern (apply #'mkstr args))))
-
-  (defun readfmt (fmt &rest args)
-    "READ a string created by calling the formatter on the supplied
-    arguments."
-    (read-from-string (apply #'format nil fmt args))))
-
-(defun get-opt (which)
-  "Returns the current optimization declared in the environment for
-  WHAT, which may be one of SPEED SPACE SAFETY or DEBUG."
-  (or (cadr (assoc which (cl-environments:declaration-information
-			  'optimize)))
-      1))
 
 (defmacro with-ss (var-slot-pairs prefix obj &body body)
   "WITH-SLOTS is not specified to work with structure, per the
@@ -242,6 +203,8 @@
   accidentally try to print the root of the vector tree, or
   ridiculously long size slots, and so on."
   (print-unreadable-object (object stream :type t :identity t)))
+
+(declaim (inline spv-p))
 
 (defstruct (sparse-vector (:include spv-args) (:constructor make-spv)
                           (:conc-name spv-) (:print-object spv-print))
@@ -440,3 +403,8 @@
   (funcall (spv-set spv) index value))
 
 (defsetf spvref spvset)
+
+(defun spvp (thing)
+  "Return a true value if THING is a sparse vector, else NIL."
+  (declare (inline spv-p))
+  (spv-p thing))
