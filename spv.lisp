@@ -204,10 +204,9 @@
   ridiculously long size slots, and so on."
   (print-unreadable-object (object stream :type t :identity t)))
 
-(declaim (inline spv-p))
-
 (defstruct (sparse-vector (:include spv-args) (:constructor make-spv)
-                          (:conc-name spv-) (:print-object spv-print))
+                          (:conc-name spv-) (:print-object spv-print)
+			  (:predicate spvp))
   ;; The tree of vectors:  "top index" #( - o - - - - - - - o - …)
   ;;                                        |               |
   ;;                        "other indexes" #(- - o - …)    #(…)
@@ -403,8 +402,3 @@
   (funcall (spv-set spv) index value))
 
 (defsetf spvref spvset)
-
-(defun spvp (thing)
-  "Return a true value if THING is a sparse vector, else NIL."
-  (declare (inline spv-p))
-  (spv-p thing))
