@@ -13,7 +13,7 @@
 
 (uiop:define-package :accretions/test/suites
   (:use :cl :fiveam)
-  (:export #:all #:misc #:spv #:run-all)
+  (:export #:all #:misc #:spv #:try)
   (:nicknames :accretions/test))
 (in-package :accretions/test/suites)
 
@@ -28,7 +28,8 @@
   :description "sparse vector tests"
   :in all)
 
-(defun run-all ()
-  "Run all tests in the Accretions system.  This function mostly
-  exists to support testing through ASDF using a single symbol."
-  (run! 'all))
+(defun try (&optional (test-suite 'all))
+  "Runs all the tests in TEST-SUITE.  Just a convenience function that
+  helps ASDF a bit.  TEST-SUITE is a symbol in any package; it is
+  converted to a symbol in the suites package."
+  (run! (intern (symbol-name test-suite) :accretions/test/suites)))

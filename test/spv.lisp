@@ -5,16 +5,10 @@
 (eval-when (:execute)          (princ "executing test/spv") (fresh-line))
 
 (defpackage :accretions/test/spv
-  (:use :cl :fiveam :accretions :accretions/spv :accretions/test/suites)
-  (:export #:spv #:try))
+  (:use :cl :fiveam :accretions :accretions/spv :accretions/test/suites))
 (in-package :accretions/test/spv)
 
 (in-suite accretions/test:spv)
-
-(defun try ()
-  "Run all sparse vector tests in the Accretions system.  This is a
-  convenience function, nothing more."
-  (run! 'spv))
 
 (test creation
   (let ((sv (make-sparse-vector '(2 3 4 5) :element-type 'short-float :initial-element 42s0)))

@@ -22,8 +22,7 @@ structures and algorithms."
   :in-order-to ((test-op (test-op "accretions/test"))))
 
 (asdf:defsystem "accretions/test"
-  ;; :perform (test-op (o s) (uiop:symbol-call :fiveam 'run!
-  ;; 					    'accretions/test:all))
+  :perform (test-op (o s) (uiop:symbol-call :accretions/test/suites 'try 'all))
   :class :package-inferred-system
   :defsystem-depends-on ("asdf-package-system")
   :depends-on ("fiveam" "accretions" "accretions/test/suites"

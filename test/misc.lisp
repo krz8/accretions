@@ -33,7 +33,8 @@
   (is (string= "ABC" (mkstr 'a "" 'b "" 'c))))
 
 (test symb
-  (is (eq 'ABC123DEF456 (symb 'abc 123 :def "456"))))
+  (is (eq 'ABC123DEF456 (symb 'abc 123 :def "456")))
+  (is (eq 'ABC123DEF456 (symb 'abc "" 123 "" :def "" "456"))))
 
 (test readfmt
   (is (equal '(FOO 123 BAR) (readfmt "(~w 123 ~w)" 'foo 'bar))))
