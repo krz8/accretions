@@ -1,4 +1,5 @@
 #-asdf3.1 (error "ACCRETIONS requires ASDF 3.1.2 or later")
+
 (asdf:defsystem "accretions"
   :description "Accretions is a collection of performant data
 structures and algorithms."
@@ -17,12 +18,13 @@ structures and algorithms."
   structures and their related algorithms."
   :class :package-inferred-system
   :defsystem-depends-on ("asdf-package-system") 
-  :depends-on ("accretions/misc" "accretions/spv" "accretions/all")
-  :in-order-to ((test-op (test-op "accretions/test/all"))))
+  :depends-on ("accretions/all")
+  :in-order-to ((test-op (test-op "accretions/test"))))
 
 (asdf:defsystem "accretions/test"
-  :perform (test-op (o s)
-	     (uiop:symbol-call "accretions/test/all" 'test-all))
+  ;; :perform (test-op (o s) (uiop:symbol-call :fiveam 'run!
+  ;; 					    'accretions/test:all))
   :class :package-inferred-system
-  :defsystem-depends-on ("asdf-package-system") 
-  :depends-on ("fiveam" "accretions/all" "accretions/test/all"))
+  :defsystem-depends-on ("asdf-package-system")
+  :depends-on ("fiveam" "accretions" "accretions/test/suites"
+			"accretions/test/misc" "accretions/test/spv"))

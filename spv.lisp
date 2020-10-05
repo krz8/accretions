@@ -1,8 +1,8 @@
 ;;;; sparse vectors
 
-(eval-when (:compile-toplevel) (print "compiling spv"))
-(eval-when (:load-toplevel)    (print "loading spv"))
-(eval-when (:execute)          (print "executing spv"))
+(eval-when (:compile-toplevel) (princ "compiling spv") (fresh-line))
+(eval-when (:load-toplevel)    (princ "loading spv")   (fresh-line))
+(eval-when (:execute)          (princ "executing spv") (fresh-line))
 
 (defpackage :accretions/spv
   (:use #:cl #:cl-environments #:accretions/misc)

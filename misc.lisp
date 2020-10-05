@@ -1,8 +1,8 @@
 ;;;; miscellaneous hacks
 
-(eval-when (:compile-toplevel) (print "compiling misc"))
-(eval-when (:load-toplevel)    (print "loading misc"))
-(eval-when (:execute)          (print "executing misc"))
+(eval-when (:compile-toplevel) (princ "compiling misc") (fresh-line))
+(eval-when (:load-toplevel)    (princ "loading misc")   (fresh-line))
+(eval-when (:execute)          (princ "executing misc") (fresh-line))
 
 (defpackage :accretions/misc
   (:use #:cl #:cl-environments)
